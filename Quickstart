@@ -1,0 +1,10 @@
+# backend
+cd backend
+cp .env.example .env   # fill in your DB credentials and JWT secret
+npm install
+npm run dev
+
+# frontend (new terminal)
+cd frontend
+npm install
+npm run dev
