@@ -9,9 +9,13 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  interface LoginResponse {
+    token: string;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data } = await api.post('/auth/login', { username, password });
+    const { data } = await api.post<LoginResponse>('/auth/login', { username, password });
     login(data.token);
     navigate('/');
   };

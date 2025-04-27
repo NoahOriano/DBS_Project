@@ -5,7 +5,7 @@ export default function Dashboard() {
   const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
-    api.get('/items').then(res => setItems(res.data));
+    api.get('/items').then(res => setItems(res.data as any[]));
   }, []);
 
   return (

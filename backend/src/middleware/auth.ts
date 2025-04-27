@@ -16,7 +16,7 @@ export const authenticate: RequestHandler = async (req, res, next): Promise<void
     }
 
     const token = header.slice(7);
-    req.user = jwt.verify(token, process.env.JWT_SECRET!) as { id: number; roles: string[] };
+    req.user = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
 
     next();                     // hand control to the next middleware/route
   } catch (err) {
