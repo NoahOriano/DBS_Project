@@ -1,30 +1,29 @@
-import { Route, Routes, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import { useAuth } from './auth';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './auth';
 import NavBar from './components/NavBar';
-import { JSX } from 'react';
 
-function PrivateRoute({ children }: { children: JSX.Element }) {
-  const { token } = useAuth();
-  return token ? children : <Navigate to="/login" replace />;
-}
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ChangePassword from './pages/ChangePassword';
+import SecurityQA from './pages/SecurityQA';
+import Dashboard from './pages/Dashboard';
 
-export default function App() {
+export default function App(): JSX.Element {
   return (
-    <>
-      <NavBar />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-      </Routes>
-    </>
+    <BrowserRouter>
+      <AuthProvider>
+        <NavBar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/security-qa" element={<SecurityQA />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

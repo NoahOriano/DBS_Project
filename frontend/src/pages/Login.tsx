@@ -1,23 +1,31 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import api from '../api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 
-export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+interface LoginResponse {
+  token: string;
+}
+
+export default function Login(): JSX.Element {
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  interface LoginResponse {
-    token: string;
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const { data } = await api.post<LoginResponse>('/auth/login', { username, password });
-    login(data.token);
-    navigate('/');
+    try {
+      const { data } = await api.post<LoginResponse>('/auth/login', {
+        username,
+        password,
+      });
+      login(data.token);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login failed', err);
+      alert('Invalid credentials');
+    }
   };
 
   return (
@@ -25,11 +33,20 @@ export default function Login() {
       <h2>Login</h2>
       <div>
         <label>Username</label>
-        <input value={username} onChange={e => setUsername(e.target.value)} />
+        <input
+          required
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+        />
       </div>
       <div>
         <label>Password</label>
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+        <input
+          required
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
       </div>
       <button type="submit">Sign in</button>
     </form>
