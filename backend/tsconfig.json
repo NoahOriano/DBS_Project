@@ -9,5 +9,7 @@
       "strict": true,
       "types": ["node", "express"],
       "resolveJsonModule": true
-    }
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
   }
