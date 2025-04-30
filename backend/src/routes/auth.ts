@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/auth/register
 // — patient self-signup (default role = "patient")
-router.post(
+/*router.post(
   '/register',
   async (req: Request, res: Response): Promise<void> => {
     const { username, password } = req.body;
@@ -19,6 +19,36 @@ router.post(
 
     const hash = await bcrypt.hash(password, 12);
     await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, 'patient']);
+
+    res.status(201).json({ message: 'User created' });
+  }
+);*/
+
+// POST /api/auth/register
+router.post(
+  '/register',
+  async (req: Request, res: Response): Promise<void> => {
+    const { username, password, role } = req.body;
+
+    // Validate presence
+    if (!username || !password || !role) {
+      res.status(400).json({ message: 'Username, password and role are required' });
+      return;
+    }
+
+    // Validate allowed roles
+    const allowed = ['patient', 'physician', 'admin'];
+    if (!allowed.includes(role)) {
+      res.status(400).json({ message: 'Role must be one of: patient, physician, admin' });
+      return;
+    }
+
+    // Hash password and create user
+    const hash = await bcrypt.hash(password, 12);
+    await pool.execute(
+      'CALL spCreateUser(?, ?, ?)',
+      [username, hash, role]
+    );
 
     res.status(201).json({ message: 'User created' });
   }
