@@ -1,8 +1,12 @@
 import { Route, Routes, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';       // ← added
+import ChangePassword from './pages/ChangePassword';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import { useAuth } from './auth';
 import NavBar from './components/NavBar';
+import { useAuth } from './auth';
 import { JSX } from 'react';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -15,15 +19,27 @@ export default function App() {
     <>
       <NavBar />
       <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />  {/* ← new */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
           }
         />
+        <Route
+          path="/change-password"
+          element={
+            <PrivateRoute>
+              <ChangePassword />
+            </PrivateRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
