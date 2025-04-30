@@ -1,5 +1,11 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
+import jwtDecode from 'jwt-decode';
 
 interface AuthContextValue {
   token: string | null;
@@ -8,17 +14,39 @@ interface AuthContextValue {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue>(null!);
+// shape of the decoded JWT payload (adjust fields if yours differ)
+interface JwtTokenPayload {
+  id?: number;
+  username?: string;
+  roles?: string[];
+}
+
+const AuthContext = createContext<AuthContextValue>({
+  token: null,
+  roles: [],
+  login: () => {},
+  logout: () => {},
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(
+    () => localStorage.getItem('token')
+  );
   const [roles, setRoles] = useState<string[]>([]);
 
   useEffect(() => {
-    if (token) {
-      const payload: any = jwtDecode(token);
-      setRoles(payload.roles || []);
-    } else {
+    // if no token, clear roles and bail
+    if (!token) {
+      setRoles([]);
+      return;
+    }
+
+    try {
+      // Now TS knows token is a string
+      const payload = jwtDecode<JwtTokenPayload>(token);
+      setRoles(Array.isArray(payload.roles) ? payload.roles : []);
+    } catch (err) {
+      console.error('JWT decode failed:', err);
       setRoles([]);
     }
   }, [token]);

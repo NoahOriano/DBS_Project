@@ -31,13 +31,93 @@ BEGIN
 END
 GO
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+/* -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping One
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------
+-- User Management Stored Procedures
+----------------------------------------------------------------*/
 
 
+-- Create or update a user (username, hashed password, roles)
+CREATE OR ALTER PROCEDURE spCreateUser
+  @Username     NVARCHAR(100),
+  @PasswordHash NVARCHAR(200),
+  @Roles        NVARCHAR(200) = 'patient'   -- e.g. 'patient' or 'Admin,Provider'
+AS
+BEGIN
+  INSERT INTO dbo.Users (Username, PasswordHash, Roles)
+  VALUES (@Username, @PasswordHash, @Roles);
+END
+GO
 
+-- Get a user by username (includes security QA fields)
+CREATE OR ALTER PROCEDURE spGetUserByUsername
+  @Username NVARCHAR(100)
+AS
+BEGIN
+  SELECT *
+    FROM dbo.Users
+   WHERE Username = @Username;
+END
+GO
 
+-- Get a user by ID
+CREATE OR ALTER PROCEDURE spGetUserById
+  @Id INT
+AS
+BEGIN
+  SELECT * FROM dbo.Users WHERE Id = @Id;
+END
+GO
+
+-- Change a user's password
+CREATE OR ALTER PROCEDURE spChangePassword
+  @Id            INT,
+  @PasswordHash  NVARCHAR(200)
+AS
+BEGIN
+  UPDATE dbo.Users
+    SET PasswordHash = @PasswordHash
+    WHERE Id = @Id;
+END
+GO
+
+-- Set or update a user's security question & hashed answer
+CREATE OR ALTER PROCEDURE spSetSecurityQA
+  @UserId              INT,
+  @SecurityQuestion    NVARCHAR(255),
+  @SecurityAnswerHash  NVARCHAR(200)
+AS
+BEGIN
+  UPDATE dbo.Users
+    SET SecurityQuestion   = @SecurityQuestion,
+        SecurityAnswerHash = @SecurityAnswerHash
+    WHERE Id = @UserId;
+END
+GO
+
+-- Get security question & answer hash for a given username
+CREATE OR ALTER PROCEDURE spGetSecurityQAByUsername
+  @Username NVARCHAR(100)
+AS
+BEGIN
+  SELECT Id,
+         SecurityQuestion,
+         SecurityAnswerHash
+    FROM dbo.Users
+   WHERE Username = @Username;
+END
+GO
+
+-- Fetch items for a given user
+CREATE OR ALTER PROCEDURE spGetItemsForUser
+  @UserId INT
+AS
+BEGIN
+  SELECT * FROM dbo.Items WHERE UserId = @UserId;
+END
+GO
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Two - Noah Oriano - Procedures

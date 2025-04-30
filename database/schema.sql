@@ -14,8 +14,21 @@ CREATE TABLE dbo.Items (
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping One
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE TABLE dbo.Users (
+  Id INT IDENTITY PRIMARY KEY,
+  Username           NVARCHAR(100) NOT NULL UNIQUE,
+  PasswordHash       NVARCHAR(200) NOT NULL,
+  Roles              NVARCHAR(200) NOT NULL DEFAULT 'patient',
+  SecurityQuestion   NVARCHAR(255) NULL,        -- e.g. "What was your first pet’s name?"
+  SecurityAnswerHash NVARCHAR(200) NULL         -- bcrypt hash of the answer
+);
 
-
+CREATE TABLE dbo.Items (
+  Id     INT IDENTITY PRIMARY KEY,
+  UserId INT NOT NULL
+               FOREIGN KEY REFERENCES dbo.Users(Id) ON DELETE CASCADE,
+  Name   NVARCHAR(100) NOT NULL
+);
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Two - Noah Oriano - Schema
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
