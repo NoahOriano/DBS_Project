@@ -1,4 +1,7 @@
--- Switch to your database
+-- Switch to the target database
+CREATE DATABASE IF NOT EXISTS HMSS_DB
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
 USE HMSS_DB;
 
 -- ===================================================================
@@ -22,7 +25,9 @@ CREATE PROCEDURE spGetUserByUsername (
   IN p_Username VARCHAR(100)
 )
 BEGIN
-  SELECT * FROM Users WHERE Username = p_Username;
+  SELECT * 
+    FROM Users 
+   WHERE Username = p_Username;
 END$$
 
 DROP PROCEDURE IF EXISTS spGetUserById$$
@@ -30,7 +35,9 @@ CREATE PROCEDURE spGetUserById (
   IN p_Id INT
 )
 BEGIN
-  SELECT * FROM Users WHERE Id = p_Id;
+  SELECT *
+    FROM Users
+   WHERE Id = p_Id;
 END$$
 
 DROP PROCEDURE IF EXISTS spChangePassword$$
@@ -41,7 +48,7 @@ CREATE PROCEDURE spChangePassword (
 BEGIN
   UPDATE Users
     SET PasswordHash = p_PasswordHash
-    WHERE Id = p_Id;
+   WHERE Id = p_Id;
 END$$
 
 DROP PROCEDURE IF EXISTS spSetSecurityQA$$
@@ -54,7 +61,7 @@ BEGIN
   UPDATE Users
     SET SecurityQuestion   = p_SecurityQuestion,
         SecurityAnswerHash = p_SecurityAnswerHash
-    WHERE Id = p_UserId;
+   WHERE Id = p_UserId;
 END$$
 
 DROP PROCEDURE IF EXISTS spGetSecurityQAByUsername$$
@@ -62,7 +69,9 @@ CREATE PROCEDURE spGetSecurityQAByUsername (
   IN p_Username VARCHAR(100)
 )
 BEGIN
-  SELECT Id, SecurityQuestion, SecurityAnswerHash
+  SELECT Id,
+         SecurityQuestion,
+         SecurityAnswerHash
     FROM Users
    WHERE Username = p_Username;
 END$$
@@ -72,15 +81,16 @@ CREATE PROCEDURE spGetItemsForUser (
   IN p_UserId INT
 )
 BEGIN
-  SELECT * FROM Items WHERE UserId = p_UserId;
+  SELECT *
+    FROM Items
+   WHERE UserId = p_UserId;
 END$$
 
 DELIMITER ;
 
 
 -- ===================================================================
--- Grouping Two: Noah Oriano – Clinical & Financial Procedures
--- (MySQL/InnoDB)
+-- Grouping Two: Clinical & Financial Procedures (MySQL/InnoDB)
 -- ===================================================================
 DELIMITER $$
 
@@ -108,8 +118,8 @@ CREATE PROCEDURE sp_update_patient (
 BEGIN
   UPDATE PATIENT
      SET First_Name    = COALESCE(p_first_name, First_Name),
-         Last_Name     = COALESCE(p_last_name, Last_Name),
-         Date_Of_Birth = COALESCE(p_dob, Date_Of_Birth)
+         Last_Name     = COALESCE(p_last_name,  Last_Name),
+         Date_Of_Birth = COALESCE(p_dob,        Date_Of_Birth)
    WHERE Patient_ID = p_patient_id;
 END$$
 
@@ -137,8 +147,8 @@ CREATE PROCEDURE sp_update_physician (
 BEGIN
   UPDATE PHYSICIAN
      SET First_Name = COALESCE(p_first_name, First_Name),
-         Last_Name  = COALESCE(p_last_name, Last_Name),
-         Role       = COALESCE(p_role, Role)
+         Last_Name  = COALESCE(p_last_name,  Last_Name),
+         Role       = COALESCE(p_role,       Role)
    WHERE Physician_ID = p_physician_id;
 END$$
 
@@ -162,7 +172,8 @@ CREATE PROCEDURE sp_create_prescription (
 )
 BEGIN
   START TRANSACTION;
-    INSERT INTO PRESCRIPTION (Prescribing_Physician_ID, Patient_ID, Issued_Date, Notes)
+    INSERT INTO PRESCRIPTION
+      (Prescribing_Physician_ID, Patient_ID, Issued_Date, Notes)
       VALUES (p_physician_id, p_patient_id, p_issue_date, p_notes);
     SELECT LAST_INSERT_ID() AS New_Prescription_ID;
   COMMIT;
@@ -194,8 +205,10 @@ CREATE PROCEDURE sp_add_soap_entry (
 )
 BEGIN
   INSERT INTO SOAP_ENTRIES
-    (Patient_ID, Physician_ID, Note_DateTime, Subjective, Objective, Assessment, Plan)
-    VALUES (p_patient_id, p_physician_id, p_note_dt, p_subj, p_obj, p_assessment, p_plan);
+    (Patient_ID, Physician_ID, Note_DateTime,
+     Subjective, Objective, Assessment, Plan)
+    VALUES (p_patient_id, p_physician_id, p_note_dt,
+            p_subj, p_obj, p_assessment, p_plan);
 END$$
 
 DROP PROCEDURE IF EXISTS sp_place_order$$
@@ -208,8 +221,10 @@ CREATE PROCEDURE sp_place_order (
 )
 BEGIN
   INSERT INTO ORDERS
-    (Ordering_Physician_ID, Patient_ID, Prescription_ID, Order_Type, Order_Description, Order_Date)
-    VALUES (p_physician_id, p_patient_id, p_prescription_id, p_order_type, p_description, CURDATE());
+    (Ordering_Physician_ID, Patient_ID, Prescription_ID,
+     Order_Type, Order_Description, Order_Date)
+    VALUES (p_physician_id, p_patient_id, p_prescription_id,
+            p_order_type, p_description, CURDATE());
 END$$
 
 DROP PROCEDURE IF EXISTS sp_update_order_status$$
@@ -221,7 +236,7 @@ BEGIN
   UPDATE ORDERS
     SET Order_Status    = p_new_status,
         Completion_Date = IF(p_new_status = 'Completed', CURDATE(), Completion_Date)
-    WHERE Order_ID = p_order_id;
+   WHERE Order_ID = p_order_id;
 END$$
 
 DROP PROCEDURE IF EXISTS sp_generate_bill$$
@@ -233,7 +248,8 @@ CREATE PROCEDURE sp_generate_bill (
 )
 BEGIN
   START TRANSACTION;
-    INSERT INTO BILLING (Patient_ID, Total_Charges, Patient_Responsibility, Bill_Date)
+    INSERT INTO BILLING
+      (Patient_ID, Total_Charges, Patient_Responsibility, Bill_Date)
       VALUES (p_patient_id, p_total_charges, p_patient_resp, p_bill_date);
     SELECT LAST_INSERT_ID() AS New_Bill_ID;
   COMMIT;
@@ -247,7 +263,8 @@ CREATE PROCEDURE sp_record_payment (
   IN p_method    VARCHAR(50)
 )
 BEGIN
-  INSERT INTO PAYMENT (Bill_ID, Payment_Date, Payment_Amount, Payment_Method)
+  INSERT INTO PAYMENT
+    (Bill_ID, Payment_Date, Payment_Amount, Payment_Method)
     VALUES (p_bill_id, p_pay_date, p_amount, p_method);
 END$$
 
@@ -259,7 +276,8 @@ CREATE PROCEDURE sp_file_insurance_claim (
   IN p_amt_claimed  DECIMAL(10,2)
 )
 BEGIN
-  INSERT INTO INSURANCE_CLAIM (Bill_ID, Insurance_ID, Claim_Date, Amount_Claimed)
+  INSERT INTO INSURANCE_CLAIM
+    (Bill_ID, Insurance_ID, Claim_Date, Amount_Claimed)
     VALUES (p_bill_id, p_insurance_id, p_claim_date, p_amt_claimed);
 END$$
 
@@ -275,7 +293,7 @@ BEGIN
     SET Claim_Status     = p_status,
         Amount_Approved  = p_amt_approved,
         Paid_To_Provider = p_paid_to_prov
-    WHERE Claim_ID = p_claim_id;
+   WHERE Claim_ID = p_claim_id;
 END$$
 
 DROP PROCEDURE IF EXISTS sp_patient_balance$$
@@ -284,7 +302,7 @@ CREATE PROCEDURE sp_patient_balance (
 )
 BEGIN
   SELECT b.Patient_ID,
-         SUM(b.Total_Charges)          AS Total_Charges,
+         SUM(b.Total_Charges)             AS Total_Charges,
          IFNULL(SUM(ic.Paid_To_Provider),0) AS Insurance_Paid,
          IFNULL(SUM(p.Payment_Amount),0)    AS Patient_Paid,
          SUM(b.Total_Charges)
@@ -292,7 +310,7 @@ BEGIN
            - IFNULL(SUM(p.Payment_Amount),0) AS Outstanding
     FROM BILLING b
     LEFT JOIN INSURANCE_CLAIM ic ON ic.Bill_ID = b.Bill_ID
-    LEFT JOIN PAYMENT p          ON p.Bill_ID  = b.Bill_ID
+    LEFT JOIN PAYMENT p          ON p.Bill_ID   = b.Bill_ID
    WHERE b.Patient_ID = p_patient_id
    GROUP BY b.Patient_ID;
 END$$

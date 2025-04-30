@@ -1,4 +1,12 @@
+-- 1) Create the database (if it doesn't exist) and switch to it
+CREATE DATABASE IF NOT EXISTS HMSS_DB
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
 USE HMSS_DB;
+
+-- ==================================================================
+-- Grouping One: Core User & Item Tables (MySQL syntax & collation)
+-- ==================================================================
 
 CREATE TABLE IF NOT EXISTS Users (
   Id                  INT            AUTO_INCREMENT PRIMARY KEY,
@@ -7,71 +15,58 @@ CREATE TABLE IF NOT EXISTS Users (
   Roles               VARCHAR(200)   NOT NULL DEFAULT 'patient',
   SecurityQuestion    VARCHAR(255)   NULL,  -- e.g. 'What was your first pet’s name?'
   SecurityAnswerHash  VARCHAR(200)   NULL   -- bcrypt hash of the answer
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS Items (
   Id     INT          AUTO_INCREMENT PRIMARY KEY,
   UserId INT          NOT NULL,
   Name   VARCHAR(100) NOT NULL,
-  FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  FOREIGN KEY (UserId)
+    REFERENCES Users(Id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
--- Grouping One
------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
-CREATE TABLE dbo.Users (
-  Id INT IDENTITY PRIMARY KEY,
-  Username           NVARCHAR(100) NOT NULL UNIQUE,
-  PasswordHash       NVARCHAR(200) NOT NULL,
-  Roles              NVARCHAR(200) NOT NULL DEFAULT 'patient',
-  SecurityQuestion   NVARCHAR(255) NULL,        -- e.g. "What was your first pet’s name?"
-  SecurityAnswerHash NVARCHAR(200) NULL         -- bcrypt hash of the answer
-);
+-- ==================================================================
+-- Grouping Two: Clinical Documentation & Reference Data
+-- (already MySQL/InnoDB, add explicit collation for consistency)
+-- ==================================================================
 
-CREATE TABLE dbo.Items (
-  Id     INT IDENTITY PRIMARY KEY,
-  UserId INT NOT NULL
-               FOREIGN KEY REFERENCES dbo.Users(Id) ON DELETE CASCADE,
-  Name   NVARCHAR(100) NOT NULL
-);
-/*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
--- Grouping Two - Noah Oriano - Schema
------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
-
-/* PATIENT — Master record for every person receiving care */
-CREATE TABLE PATIENT (
+CREATE TABLE IF NOT EXISTS PATIENT (
     Patient_ID      INT          NOT NULL AUTO_INCREMENT,
     First_Name      VARCHAR(50)  NOT NULL,
     Last_Name       VARCHAR(50)  NOT NULL,
     Date_Of_Birth   DATE,
     PRIMARY KEY (Patient_ID)
-) ENGINE = InnoDB;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* PHYSICIAN — Licensed provider (may include residents, etc.) */
-CREATE TABLE PHYSICIAN (
+CREATE TABLE IF NOT EXISTS PHYSICIAN (
     Physician_ID    INT          NOT NULL AUTO_INCREMENT,
     First_Name      VARCHAR(50)  NOT NULL,
     Last_Name       VARCHAR(50)  NOT NULL,
     Role            VARCHAR(50),            -- e.g., 'Cardiologist'
     PRIMARY KEY (Physician_ID)
-) ENGINE = InnoDB;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* MEDICATION — Central drug catalogue (one row per drug/strength) */
-CREATE TABLE MEDICATION (
+CREATE TABLE IF NOT EXISTS MEDICATION (
     Medication_ID     INT           NOT NULL AUTO_INCREMENT,
     Medication_Name   VARCHAR(100)  NOT NULL,
     Form              VARCHAR(30),             -- tablet, syrup, …
     Strength          VARCHAR(30),             -- 500 mg, 10 mL, …
     CONSTRAINT uk_med_name UNIQUE (Medication_Name),
     PRIMARY KEY (Medication_ID)
-) ENGINE = InnoDB;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/*-------------------------------------------------------------
-  2.  CLINICAL DOCUMENTATION
--------------------------------------------------------------*/
-
-/* PRESCRIPTION — Header (one per prescribing event) */
-CREATE TABLE PRESCRIPTION (
+CREATE TABLE IF NOT EXISTS PRESCRIPTION (
     Prescription_ID            INT          NOT NULL AUTO_INCREMENT,
     Prescribing_Physician_ID   INT          NOT NULL,
     Patient_ID                 INT          NOT NULL,
@@ -88,10 +83,11 @@ CREATE TABLE PRESCRIPTION (
         REFERENCES PATIENT (Patient_ID)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
-) ENGINE = InnoDB;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* PRESCRIPTION_MEDICATION — M:N detail lines for each drug */
-CREATE TABLE PRESCRIPTION_MEDICATION (
+CREATE TABLE IF NOT EXISTS PRESCRIPTION_MEDICATION (
     Prescription_ID   INT          NOT NULL,
     Medication_ID     INT          NOT NULL,
     Dosage            VARCHAR(50),
@@ -108,10 +104,11 @@ CREATE TABLE PRESCRIPTION_MEDICATION (
         REFERENCES MEDICATION (Medication_ID)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
-) ENGINE = InnoDB;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* SOAP_ENTRIES — Subjective-Objective-Assessment-Plan notes */
-CREATE TABLE SOAP_ENTRIES (
+CREATE TABLE IF NOT EXISTS SOAP_ENTRIES (
     SOAP_ID        INT          NOT NULL AUTO_INCREMENT,
     Patient_ID     INT          NOT NULL,
     Physician_ID   INT          NOT NULL,
@@ -122,16 +119,21 @@ CREATE TABLE SOAP_ENTRIES (
     Plan           TEXT,
     PRIMARY KEY (SOAP_ID),
     CONSTRAINT fk_soap_patient
-        FOREIGN KEY (Patient_ID)   REFERENCES PATIENT   (Patient_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        FOREIGN KEY (Patient_ID)
+        REFERENCES PATIENT (Patient_ID)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
     CONSTRAINT fk_soap_physician
-        FOREIGN KEY (Physician_ID) REFERENCES PHYSICIAN (Physician_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        FOREIGN KEY (Physician_ID)
+        REFERENCES PHYSICIAN (Physician_ID)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
     INDEX idx_soap_patient_dt (Patient_ID, Note_DateTime)
-) ENGINE = InnoDB;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* ORDERS — Lab / imaging / procedure orders */
-CREATE TABLE ORDERS (
+CREATE TABLE IF NOT EXISTS ORDERS (
     Order_ID              INT          NOT NULL AUTO_INCREMENT,
     Ordering_Physician_ID INT          NOT NULL,
     Patient_ID            INT,
@@ -145,23 +147,27 @@ CREATE TABLE ORDERS (
     CONSTRAINT fk_orders_physician
         FOREIGN KEY (Ordering_Physician_ID)
         REFERENCES PHYSICIAN (Physician_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
     CONSTRAINT fk_orders_patient
         FOREIGN KEY (Patient_ID)
         REFERENCES PATIENT (Patient_ID)
-        ON UPDATE CASCADE ON DELETE SET NULL,
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
     CONSTRAINT fk_orders_prescription
         FOREIGN KEY (Prescription_ID)
         REFERENCES PRESCRIPTION (Prescription_ID)
-        ON UPDATE CASCADE ON DELETE SET NULL
-) ENGINE = InnoDB;
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/*-------------------------------------------------------------
-  3.  FINANCIAL TABLES
--------------------------------------------------------------*/
+-- ==================================================================
+-- Grouping Three: Financial Tables
+-- ==================================================================
 
-/* BILLING — Charge document (one per care episode or cycle) */
-CREATE TABLE BILLING (
+CREATE TABLE IF NOT EXISTS BILLING (
     Bill_ID                 INT           NOT NULL AUTO_INCREMENT,
     Patient_ID              INT           NOT NULL,
     Total_Charges           DECIMAL(10,2) NOT NULL,
@@ -171,11 +177,13 @@ CREATE TABLE BILLING (
     CONSTRAINT fk_billing_patient
         FOREIGN KEY (Patient_ID)
         REFERENCES PATIENT (Patient_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE = InnoDB;
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* INSURANCE — Patient policy record (one row per policy) */
-CREATE TABLE INSURANCE (
+CREATE TABLE IF NOT EXISTS INSURANCE (
     Insurance_ID      INT           NOT NULL AUTO_INCREMENT,
     Patient_ID        INT           NOT NULL,
     Insurance_Provider VARCHAR(100) NOT NULL,
@@ -190,11 +198,13 @@ CREATE TABLE INSURANCE (
     CONSTRAINT fk_insurance_patient
         FOREIGN KEY (Patient_ID)
         REFERENCES PATIENT (Patient_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE = InnoDB;
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* INSURANCE_CLAIM — Submission to insurer against a bill */
-CREATE TABLE INSURANCE_CLAIM (
+CREATE TABLE IF NOT EXISTS INSURANCE_CLAIM (
     Claim_ID          INT           NOT NULL AUTO_INCREMENT,
     Bill_ID           INT           NOT NULL,
     Insurance_ID      INT           NOT NULL,
@@ -207,26 +217,32 @@ CREATE TABLE INSURANCE_CLAIM (
     CONSTRAINT fk_claim_bill
         FOREIGN KEY (Bill_ID)
         REFERENCES BILLING (Bill_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
     CONSTRAINT fk_claim_insurance
         FOREIGN KEY (Insurance_ID)
         REFERENCES INSURANCE (Insurance_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE = InnoDB;
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
-/* PAYMENT — Cash / card / ACH settlements made by patient */
-CREATE TABLE PAYMENT (
+CREATE TABLE IF NOT EXISTS PAYMENT (
     Payment_ID      INT           NOT NULL AUTO_INCREMENT,
     Bill_ID         INT           NOT NULL,
     Payment_Date    DATE          NOT NULL,
     Payment_Amount  DECIMAL(10,2) NOT NULL,
-    Payment_Method  VARCHAR(50)   NOT NULL,  -- 'Card', 'Cash', 'Check', …
+    Payment_Method  VARCHAR(50)   NOT NULL,
     PRIMARY KEY (Payment_ID),
     CONSTRAINT fk_payment_bill
         FOREIGN KEY (Bill_ID)
         REFERENCES BILLING (Bill_ID)
-        ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE = InnoDB;
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
 /*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Three
