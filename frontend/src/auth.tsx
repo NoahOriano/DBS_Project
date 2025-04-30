@@ -5,7 +5,8 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import jwtDecode from 'jwt-decode';
+//import jwtDecode from 'jwt-decode';
+import * as jwtDecode from 'jwt-decode';
 
 interface AuthContextValue {
   token: string | null;

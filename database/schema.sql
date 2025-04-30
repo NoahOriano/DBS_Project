@@ -1,19 +1,24 @@
-CREATE TABLE dbo.Users (
-  Id INT IDENTITY PRIMARY KEY,
-  Username NVARCHAR(100) NOT NULL UNIQUE,
-  PasswordHash NVARCHAR(200) NOT NULL,
-  Roles NVARCHAR(200) NOT NULL DEFAULT 'user'
-);
+USE HMSS_DB;
 
-CREATE TABLE dbo.Items (
-  Id INT IDENTITY PRIMARY KEY,
-  UserId INT NOT NULL FOREIGN KEY REFERENCES dbo.Users(Id) ON DELETE CASCADE,
-  Name NVARCHAR(100) NOT NULL
-);
+CREATE TABLE IF NOT EXISTS Users (
+  Id                  INT            AUTO_INCREMENT PRIMARY KEY,
+  Username            VARCHAR(100)   NOT NULL UNIQUE,
+  PasswordHash        VARCHAR(200)   NOT NULL,
+  Roles               VARCHAR(200)   NOT NULL DEFAULT 'patient',
+  SecurityQuestion    VARCHAR(255)   NULL,  -- e.g. 'What was your first pet’s name?'
+  SecurityAnswerHash  VARCHAR(200)   NULL   -- bcrypt hash of the answer
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS Items (
+  Id     INT          AUTO_INCREMENT PRIMARY KEY,
+  UserId INT          NOT NULL,
+  Name   VARCHAR(100) NOT NULL,
+  FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping One
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 CREATE TABLE dbo.Users (
   Id INT IDENTITY PRIMARY KEY,
   Username           NVARCHAR(100) NOT NULL UNIQUE,
@@ -29,9 +34,9 @@ CREATE TABLE dbo.Items (
                FOREIGN KEY REFERENCES dbo.Users(Id) ON DELETE CASCADE,
   Name   NVARCHAR(100) NOT NULL
 );
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Two - Noah Oriano - Schema
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 /* PATIENT — Master record for every person receiving care */
 CREATE TABLE PATIENT (
@@ -223,6 +228,6 @@ CREATE TABLE PAYMENT (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE = InnoDB;
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Three
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
