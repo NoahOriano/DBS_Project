@@ -247,3 +247,68 @@ CREATE TABLE IF NOT EXISTS PAYMENT (
 /*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Three
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+-- ==================================================================
+-- Grouping: Pharmacy, Lab, and Notification Modules (g, h, i)
+-- ==================================================================
+
+-- PHARMACIST: Stores pharmacist contact details
+CREATE TABLE IF NOT EXISTS PHARMACIST (
+    Pharmacist_ID   INT AUTO_INCREMENT PRIMARY KEY,
+    First_Name      VARCHAR(50) NOT NULL,
+    Last_Name       VARCHAR(50) NOT NULL,
+    Email           VARCHAR(100) UNIQUE,
+    Phone           VARCHAR(20) UNIQUE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- LAB_TECHNICIAN: Stores lab technician contact info
+CREATE TABLE IF NOT EXISTS LAB_TECHNICIAN (
+    Technician_ID   INT AUTO_INCREMENT PRIMARY KEY,
+    First_Name      VARCHAR(50) NOT NULL,
+    Last_Name       VARCHAR(50) NOT NULL,
+    Email           VARCHAR(100) UNIQUE,
+    Phone           VARCHAR(20) UNIQUE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- LAB_TEST: Stores test requests and results
+CREATE TABLE IF NOT EXISTS LAB_TEST (
+    LabTest_ID      INT AUTO_INCREMENT PRIMARY KEY,
+    Patient_ID      INT NOT NULL,
+    Physician_ID    INT NOT NULL,
+    Technician_ID   INT,
+    Test_Type       VARCHAR(100) NOT NULL,
+    Test_Results    TEXT,
+    Result_Status   ENUM('Pending', 'Completed') DEFAULT 'Pending',
+    Date_Ordered    DATE NOT NULL,
+    Date_Completed  DATE,
+    FOREIGN KEY (Patient_ID) REFERENCES PATIENT(Patient_ID)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (Physician_ID) REFERENCES PHYSICIAN(Physician_ID)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (Technician_ID) REFERENCES LAB_TECHNICIAN(Technician_ID)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- NOTIFICATION: Stores messages sent between users
+CREATE TABLE IF NOT EXISTS NOTIFICATION (
+    Notification_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Sender_ID       INT NOT NULL,
+    Receiver_ID     INT NOT NULL,
+    Message         TEXT NOT NULL,
+    Timestamp       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (Sender_ID) REFERENCES Users(Id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (Receiver_ID) REFERENCES Users(Id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+/*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Grouping: Pharmacy, Lab, and Notification Modules (g, h, i)
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
