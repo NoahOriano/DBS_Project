@@ -4,11 +4,11 @@ CREATE DATABASE IF NOT EXISTS HMSS_DB
   COLLATE utf8mb4_unicode_ci;
 USE HMSS_DB;
 
+
 -- ===================================================================
--- Grouping One: User Management Stored Procedures (MySQL syntax)
+-- Grouping One: User Management Stored Procedures
 -- ===================================================================
 DELIMITER $$
-
 DROP PROCEDURE IF EXISTS spCreateUser$$
 CREATE PROCEDURE spCreateUser (
   IN p_Username     VARCHAR(100),
@@ -25,8 +25,8 @@ CREATE PROCEDURE spGetUserByUsername (
   IN p_Username VARCHAR(100)
 )
 BEGIN
-  SELECT * 
-    FROM Users 
+  SELECT *
+    FROM Users
    WHERE Username = p_Username;
 END$$
 
@@ -85,9 +85,139 @@ BEGIN
     FROM Items
    WHERE UserId = p_UserId;
 END$$
-
 DELIMITER ;
 
+-- ===================================================================
+-- Grouping One-B: Profile Management Procedures
+-- ===================================================================
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS spGetPatientProfile$$
+CREATE PROCEDURE spGetPatientProfile (
+  IN p_user_id INT
+)
+BEGIN
+  SELECT *
+    FROM PATIENT
+   WHERE User_Id = p_user_id;
+END$$
+
+DROP PROCEDURE IF EXISTS spUpdatePatientProfile$$
+CREATE PROCEDURE spUpdatePatientProfile (
+  IN p_user_id                   INT,
+  IN p_Medical_Record_Number     VARCHAR(50),
+  IN p_Gender                    ENUM('Male','Female','Other'),
+  IN p_Contact_Phone             VARCHAR(20),
+  IN p_Contact_Email             VARCHAR(100),
+  IN p_Home_Address              VARCHAR(255),
+  IN p_Primary_Care_Physician    VARCHAR(100),
+  IN p_Insurance_Provider        VARCHAR(100),
+  IN p_Insurance_Policy_Number   VARCHAR(100),
+  IN p_Emergency_Contact_Name    VARCHAR(100),
+  IN p_Emergency_Contact_Rel     VARCHAR(50),
+  IN p_Known_Allergies           TEXT
+)
+BEGIN
+  UPDATE PATIENT
+     SET Medical_Record_Number   = p_Medical_Record_Number,
+         Gender                  = p_Gender,
+         Contact_Phone           = p_Contact_Phone,
+         Contact_Email           = p_Contact_Email,
+         Home_Address            = p_Home_Address,
+         Primary_Care_Physician  = p_Primary_Care_Physician,
+         Insurance_Provider      = p_Insurance_Provider,
+         Insurance_Policy_Number = p_Insurance_Policy_Number,
+         Emergency_Contact_Name  = p_Emergency_Contact_Name,
+         Emergency_Contact_Rel   = p_Emergency_Contact_Rel,
+         Known_Allergies         = p_Known_Allergies
+   WHERE User_Id = p_user_id;
+END$$
+
+DROP PROCEDURE IF EXISTS spGetPhysicianProfile$$
+CREATE PROCEDURE spGetPhysicianProfile (
+  IN p_user_id INT
+)
+BEGIN
+  SELECT *
+    FROM PHYSICIAN
+   WHERE User_Id = p_user_id;
+END$$
+
+DROP PROCEDURE IF EXISTS spUpdatePhysicianProfile$$
+CREATE PROCEDURE spUpdatePhysicianProfile (
+  IN p_user_id                INT,
+  IN p_Medical_License_Number VARCHAR(50),
+  IN p_Specialty              VARCHAR(100),
+  IN p_Department             VARCHAR(100),
+  IN p_Office_Location        VARCHAR(100),
+  IN p_Contact_Phone          VARCHAR(20),
+  IN p_Contact_Email          VARCHAR(100),
+  IN p_Office_Hours           VARCHAR(100),
+  IN p_Board_Certifications   VARCHAR(255),
+  IN p_Education              TEXT,
+  IN p_Professional_Bio       TEXT
+)
+BEGIN
+  UPDATE PHYSICIAN
+     SET Medical_License_Number = p_Medical_License_Number,
+         Specialty              = p_Specialty,
+         Department             = p_Department,
+         Office_Location        = p_Office_Location,
+         Contact_Phone          = p_Contact_Phone,
+         Contact_Email          = p_Contact_Email,
+         Office_Hours           = p_Office_Hours,
+         Board_Certifications   = p_Board_Certifications,
+         Education              = p_Education,
+         Professional_Bio       = p_Professional_Bio
+   WHERE User_Id = p_user_id;
+END$$
+
+DROP PROCEDURE IF EXISTS spGetAdminProfile$$
+CREATE PROCEDURE spGetAdminProfile (
+  IN p_user_id INT
+)
+BEGIN
+  SELECT *
+    FROM ADMIN_PROFILE
+   WHERE User_Id = p_user_id;
+END$$
+
+DROP PROCEDURE IF EXISTS spUpdateAdminProfile$$
+CREATE PROCEDURE spUpdateAdminProfile (
+  IN p_user_id           INT,
+  IN p_Employee_ID       VARCHAR(50),
+  IN p_Department        VARCHAR(100),
+  IN p_Job_Title         VARCHAR(100),
+  IN p_Contact_Phone     VARCHAR(20),
+  IN p_Contact_Email     VARCHAR(100),
+  IN p_Office_Location   VARCHAR(100),
+  IN p_Permission_Level  VARCHAR(100),
+  IN p_Work_Schedule     VARCHAR(100),
+  IN p_Responsibilities  TEXT,
+  IN p_Emergency_Contact VARCHAR(255)
+)
+BEGIN
+  INSERT INTO ADMIN_PROFILE
+    (User_Id, Employee_ID, Department, Job_Title, Contact_Phone,
+     Contact_Email, Office_Location, Permission_Level,
+     Work_Schedule, Responsibilities, Emergency_Contact)
+  VALUES
+    (p_user_id, p_Employee_ID, p_Department, p_Job_Title, p_Contact_Phone,
+     p_Contact_Email, p_Office_Location, p_Permission_Level,
+     p_Work_Schedule, p_Responsibilities, p_Emergency_Contact)
+  ON DUPLICATE KEY UPDATE
+    Employee_ID      = VALUES(Employee_ID),
+    Department       = VALUES(Department),
+    Job_Title        = VALUES(Job_Title),
+    Contact_Phone    = VALUES(Contact_Phone),
+    Contact_Email    = VALUES(Contact_Email),
+    Office_Location  = VALUES(Office_Location),
+    Permission_Level = VALUES(Permission_Level),
+    Work_Schedule    = VALUES(Work_Schedule),
+    Responsibilities = VALUES(Responsibilities),
+    Emergency_Contact= VALUES(Emergency_Contact);
+END$$
+DELIMITER ;
 
 -- ===================================================================
 -- Grouping Two: Clinical & Financial Procedures (MySQL/InnoDB)

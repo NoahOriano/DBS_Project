@@ -227,4 +227,42 @@ router.post(
   }
 );
 
+// GET /api/auth/me
+router.get(
+  '/me',
+  authenticate,
+  async (req, res) => {
+    const userId = (req.user as JwtPayload).id;
+    const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
+    const u = rows[0][0];
+    res.json({
+      id: u.Id,
+      username: u.Username,
+      roles: u.Roles.split(','),
+      securityQuestion: u.SecurityQuestion,
+    });
+  }
+);
+
+// PUT /api/auth/me
+router.put(
+  '/me',
+  authenticate,
+  async (req, res) => {
+    const userId = (req.user as JwtPayload).id;
+    const { securityQuestion, securityAnswer } = req.body;
+    if (!securityQuestion || !securityAnswer) {
+      res.status(400).json({ message: 'Question and answer are required' });
+      return;
+    }
+    const hash = await bcrypt.hash(securityAnswer, 12);
+    await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [
+      userId,
+      securityQuestion,
+      hash,
+    ]);
+    res.json({ message: 'Profile updated' });
+  }
+);
+
 export default router;

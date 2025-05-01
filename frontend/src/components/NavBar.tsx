@@ -22,6 +22,12 @@ export default function NavBar() {
             Dashboard
           </Link>
           <Link
+            to="/profile"
+            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
+          >
+            Profile
+          </Link>
+          <Link
             to="/change-password"
             style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
           >
