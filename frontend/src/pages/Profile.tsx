@@ -10,12 +10,12 @@ export default function Profile() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [form, setForm]         = useState<ProfileData>({});
-  const [editing, setEditing]   = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [form,    setForm]    = useState<ProfileData>({});
+  const [editing, setEditing] = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
 
-  // Fetch profile on mount
+  // 1) Fetch
   useEffect(() => {
     api.get<ProfileData>('/profile')
       .then(res => {
@@ -29,36 +29,34 @@ export default function Profile() {
   }, [logout, navigate]);
 
   if (!profile) return <div>Loading…</div>;
-
   const role = profile.roles?.[0] as string;
 
-  // Define the fields for each role
-  type Field = {
-    key:    string;
-    label:  string;
-    type?:  string;
-    options?: string[];
-  };
+  // 2) Field definitions
+  type Field = { key: string; label: string; type?: string; options?: string[] };
 
   let fields: Field[] = [];
-
   if (role === 'patient') {
     fields = [
-      { key: 'First_Name',               label: 'First Name' },
-      { key: 'Last_Name',                label: 'Last Name' },
-      { key: 'Date_Of_Birth',            label: 'Date of Birth', type: 'date' },
-      { key: 'Medical_Record_Number',    label: 'Medical Record #' },
-      { key: 'Gender',                   label: 'Gender', options: ['Male','Female','Other'] },
-      { key: 'Contact_Phone',            label: 'Phone' },
-      { key: 'Contact_Email',            label: 'Email' },
-      { key: 'Home_Address',             label: 'Address' },
-      { key: 'Primary_Care_Physician',   label: 'Primary Care Physician' },
-      { key: 'Known_Allergies',          label: 'Known Allergies' },
+      { key: 'First_Name',             label: 'First Name' },
+      { key: 'Last_Name',              label: 'Last Name' },
+      { key: 'Date_Of_Birth',          label: 'Date of Birth', type: 'date' },
+      { key: 'Medical_Record_Number',  label: 'Medical Record #' },
+      { key: 'Gender',                 label: 'Gender', options: ['Male','Female','Other'] },
+      { key: 'Contact_Phone',          label: 'Phone' },
+      { key: 'Contact_Email',          label: 'Email' },
+      { key: 'Home_Address',           label: 'Address' },
+      { key: 'Primary_Care_Physician', label: 'Primary Care Physician' },
+      { key: 'Insurance_Provider',     label: 'Insurance Provider' },
+      { key: 'Insurance_Policy_Number',label: 'Policy Number' },
+      { key: 'Emergency_Contact_Name', label: 'Emergency Contact Name' },
+      { key: 'Emergency_Contact_Rel',  label: 'Emergency Contact Relation' },
+      { key: 'Known_Allergies',        label: 'Known Allergies' },
     ];
   } else if (role === 'physician') {
     fields = [
       { key: 'First_Name',             label: 'First Name' },
       { key: 'Last_Name',              label: 'Last Name' },
+      { key: 'Role',                   label: 'Role (e.g. Cardiologist)' },
       { key: 'Medical_License_Number', label: 'License #' },
       { key: 'Specialty',              label: 'Specialty' },
       { key: 'Department',             label: 'Department' },
@@ -66,26 +64,32 @@ export default function Profile() {
       { key: 'Contact_Phone',          label: 'Phone' },
       { key: 'Contact_Email',          label: 'Email' },
       { key: 'Office_Hours',           label: 'Office Hours' },
-      { key: 'Board_Certifications',   label: 'Certifications' },
+      { key: 'Board_Certifications',   label: 'Board Certifications' },
+      { key: 'Education',              label: 'Education' },
+      { key: 'Professional_Bio',       label: 'Professional Bio' },
     ];
   } else /* admin */ {
     fields = [
-      { key: 'Employee_ID',      label: 'Employee ID' },
-      { key: 'Department',       label: 'Department' },
-      { key: 'Job_Title',        label: 'Job Title' },
-      { key: 'Contact_Phone',    label: 'Phone' },
-      { key: 'Contact_Email',    label: 'Email' },
-      { key: 'Office_Location',  label: 'Office Location' },
-      { key: 'Permission_Level', label: 'Permission Level' },
-      { key: 'Work_Schedule',    label: 'Work Schedule' },
-      { key: 'Responsibilities', label: 'Responsibilities' },
+      { key: 'First_Name',      label: 'First Name' },
+      { key: 'Last_Name',       label: 'Last Name' },
+      { key: 'Employee_ID',     label: 'Employee ID' },
+      { key: 'Department',      label: 'Department' },
+      { key: 'Job_Title',       label: 'Job Title' },
+      { key: 'Contact_Phone',   label: 'Phone' },
+      { key: 'Contact_Email',   label: 'Email' },
+      { key: 'Office_Location', label: 'Office Location' },
+      { key: 'Permission_Level',label: 'Permission Level' },
+      { key: 'Work_Schedule',   label: 'Work Schedule' },
+      { key: 'Responsibilities',label: 'Responsibilities' },
       { key: 'Emergency_Contact',label: 'Emergency Contact' },
     ];
   }
 
-  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => {
-    setForm(prev => ({ ...prev, [key]: e.target.value }));
-  };
+  // 3) Handlers
+  const handleChange = (key: string) => 
+    (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => {
+      setForm(prev => ({ ...prev, [key]: e.target.value }));
+    };
 
   const save = async () => {
     setSaving(true);
@@ -101,36 +105,35 @@ export default function Profile() {
     }
   };
 
+  // 4) Render
   return (
     <div style={{ maxWidth: 600, margin: '2rem auto' }}>
       <h2>My Profile</h2>
       <p><strong>Username:</strong> {profile.username}</p>
       <p><strong>Role:</strong> {role}</p>
-      <hr/>
+      <hr />
 
       {error && <div style={{ color: 'red' }}>{error}</div>}
 
       {editing ? (
         <>
-          {fields.map(field => (
-            <div key={field.key} style={{ marginBottom: '1rem' }}>
-              <label>{field.label}</label><br/>
-              {field.options ? (
+          {fields.map(f => (
+            <div key={f.key} style={{ marginBottom: '1rem' }}>
+              <label>{f.label}</label><br />
+              {f.options ? (
                 <select
-                  value={form[field.key] || ''}
-                  onChange={handleChange(field.key)}
+                  value={form[f.key] || ''}
+                  onChange={handleChange(f.key)}
                   style={{ width: '100%' }}
                 >
                   <option value="">— Select —</option>
-                  {field.options.map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
+                  {f.options.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               ) : (
                 <input
-                  type={field.type || 'text'}
-                  value={form[field.key] || ''}
-                  onChange={handleChange(field.key)}
+                  type={f.type || 'text'}
+                  value={form[f.key] || ''}
+                  onChange={handleChange(f.key)}
                   style={{ width: '100%' }}
                 />
               )}

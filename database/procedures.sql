@@ -105,6 +105,9 @@ END$$
 DROP PROCEDURE IF EXISTS spUpdatePatientProfile$$
 CREATE PROCEDURE spUpdatePatientProfile (
   IN p_user_id                   INT,
+  IN p_first_name                VARCHAR(50),
+  IN p_last_name                 VARCHAR(50),
+  IN p_Date_Of_Birth             DATE,
   IN p_Medical_Record_Number     VARCHAR(50),
   IN p_Gender                    ENUM('Male','Female','Other'),
   IN p_Contact_Phone             VARCHAR(20),
@@ -119,7 +122,10 @@ CREATE PROCEDURE spUpdatePatientProfile (
 )
 BEGIN
   UPDATE PATIENT
-     SET Medical_Record_Number   = p_Medical_Record_Number,
+     SET First_Name              = p_first_name,
+         Last_Name               = p_last_name,
+         Date_Of_Birth            = p_Date_Of_Birth,
+         Medical_Record_Number   = p_Medical_Record_Number,
          Gender                  = p_Gender,
          Contact_Phone           = p_Contact_Phone,
          Contact_Email           = p_Contact_Email,
@@ -146,6 +152,9 @@ END$$
 DROP PROCEDURE IF EXISTS spUpdatePhysicianProfile$$
 CREATE PROCEDURE spUpdatePhysicianProfile (
   IN p_user_id                INT,
+  IN p_first_name             VARCHAR(50),
+  IN p_last_name              VARCHAR(50),
+  IN p_Role                   VARCHAR(50),
   IN p_Medical_License_Number VARCHAR(50),
   IN p_Specialty              VARCHAR(100),
   IN p_Department             VARCHAR(100),
@@ -159,7 +168,10 @@ CREATE PROCEDURE spUpdatePhysicianProfile (
 )
 BEGIN
   UPDATE PHYSICIAN
-     SET Medical_License_Number = p_Medical_License_Number,
+     SET First_Name             = p_first_name,
+         Last_Name              = p_last_name,
+         Role                   = p_Role,
+         Medical_License_Number = p_Medical_License_Number,
          Specialty              = p_Specialty,
          Department             = p_Department,
          Office_Location        = p_Office_Location,
@@ -185,6 +197,8 @@ END$$
 DROP PROCEDURE IF EXISTS spUpdateAdminProfile$$
 CREATE PROCEDURE spUpdateAdminProfile (
   IN p_user_id           INT,
+  IN p_first_name        VARCHAR(50),
+  IN p_last_name         VARCHAR(50),
   IN p_Employee_ID       VARCHAR(50),
   IN p_Department        VARCHAR(100),
   IN p_Job_Title         VARCHAR(100),
@@ -198,24 +212,30 @@ CREATE PROCEDURE spUpdateAdminProfile (
 )
 BEGIN
   INSERT INTO ADMIN_PROFILE
-    (User_Id, Employee_ID, Department, Job_Title, Contact_Phone,
-     Contact_Email, Office_Location, Permission_Level,
-     Work_Schedule, Responsibilities, Emergency_Contact)
+    (User_Id, First_Name, Last_Name,
+     Employee_ID, Department, Job_Title,
+     Contact_Phone, Contact_Email, Office_Location,
+     Permission_Level, Work_Schedule, Responsibilities,
+     Emergency_Contact)
   VALUES
-    (p_user_id, p_Employee_ID, p_Department, p_Job_Title, p_Contact_Phone,
-     p_Contact_Email, p_Office_Location, p_Permission_Level,
-     p_Work_Schedule, p_Responsibilities, p_Emergency_Contact)
+    (p_user_id, p_first_name, p_last_name,
+     p_Employee_ID, p_Department, p_Job_Title,
+     p_Contact_Phone, p_Contact_Email, p_Office_Location,
+     p_Permission_Level, p_Work_Schedule, p_Responsibilities,
+     p_Emergency_Contact)
   ON DUPLICATE KEY UPDATE
-    Employee_ID      = VALUES(Employee_ID),
-    Department       = VALUES(Department),
-    Job_Title        = VALUES(Job_Title),
-    Contact_Phone    = VALUES(Contact_Phone),
-    Contact_Email    = VALUES(Contact_Email),
-    Office_Location  = VALUES(Office_Location),
-    Permission_Level = VALUES(Permission_Level),
-    Work_Schedule    = VALUES(Work_Schedule),
-    Responsibilities = VALUES(Responsibilities),
-    Emergency_Contact= VALUES(Emergency_Contact);
+    First_Name        = VALUES(First_Name),
+    Last_Name         = VALUES(Last_Name),
+    Employee_ID       = VALUES(Employee_ID),
+    Department        = VALUES(Department),
+    Job_Title         = VALUES(Job_Title),
+    Contact_Phone     = VALUES(Contact_Phone),
+    Contact_Email     = VALUES(Contact_Email),
+    Office_Location   = VALUES(Office_Location),
+    Permission_Level  = VALUES(Permission_Level),
+    Work_Schedule     = VALUES(Work_Schedule),
+    Responsibilities  = VALUES(Responsibilities),
+    Emergency_Contact = VALUES(Emergency_Contact);
 END$$
 DELIMITER ;
 
@@ -223,7 +243,7 @@ DELIMITER ;
 -- Grouping Two: Clinical & Financial Procedures (MySQL/InnoDB)
 -- ===================================================================
 DELIMITER $$
-
+-- (unchanged from your existing file…)
 DROP PROCEDURE IF EXISTS sp_add_patient$$
 CREATE PROCEDURE sp_add_patient (
   IN p_first_name VARCHAR(50),

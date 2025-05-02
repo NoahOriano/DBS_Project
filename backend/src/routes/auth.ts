@@ -7,50 +7,50 @@ import { authenticate, authorize, JwtPayload } from '../middleware/auth';
 const router = express.Router();
 
 // POST /api/auth/register
-// — patient self-signup (default role = "patient")
-/*router.post(
-  '/register',
-  async (req: Request, res: Response): Promise<void> => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      res.status(400).json({ message: 'Username and password are required' });
-      return;
-    }
-
-    const hash = await bcrypt.hash(password, 12);
-    await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, 'patient']);
-
-    res.status(201).json({ message: 'User created' });
-  }
-);*/
-
-// POST /api/auth/register
 router.post(
   '/register',
   async (req: Request, res: Response): Promise<void> => {
     const { username, password, role } = req.body;
 
-    // Validate presence
+    // 1) Validate
     if (!username || !password || !role) {
       res.status(400).json({ message: 'Username, password and role are required' });
       return;
     }
-
-    // Validate allowed roles
     const allowed = ['patient', 'physician', 'admin'];
     if (!allowed.includes(role)) {
       res.status(400).json({ message: 'Role must be one of: patient, physician, admin' });
       return;
     }
 
-    // Hash password and create user
+    // 2) Hash + create user
     const hash = await bcrypt.hash(password, 12);
-    await pool.execute(
-      'CALL spCreateUser(?, ?, ?)',
-      [username, hash, role]
-    );
+    await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, role]);
 
-    res.status(201).json({ message: 'User created' });
+    // 3) Lookup the new user's Id
+    const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
+    const userId: number = userRows[0][0].Id;
+
+    // 4) Initialize their profile row
+    if (role === 'patient') {
+      await pool.execute(
+        'INSERT IGNORE INTO PATIENT (User_Id) VALUES(?)',
+        [userId]
+      );
+    } else if (role === 'physician') {
+      await pool.execute(
+        'INSERT IGNORE INTO PHYSICIAN (User_Id) VALUES(?)',
+        [userId]
+      );
+    } else { // admin
+      await pool.execute(
+        'INSERT IGNORE INTO ADMIN_PROFILE (User_Id) VALUES(?)',
+        [userId]
+      );
+    }
+
+    // 5) Finish
+    res.status(201).json({ message: 'User created and profile initialized' });
   }
 );
 

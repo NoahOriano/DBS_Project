@@ -14,30 +14,25 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
   const roles  = (req.user as JwtPayload).roles;
 
-  // 1) fetch basic user info
-  const [userRows]: any = await pool.execute(
-    'CALL spGetUserById(?)',
-    [userId]
-  );
-  const user = userRows[0]?.[0];
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
+  // 1) basic user
+  const [uRows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
+  const user = uRows[0]?.[0];
+  if (!user) return res.status(404).json({ message: 'User not found' });
 
-  // 2) fetch role-specific profile
+  // 2) role‐specific
   let profileRec: Record<string, any> = {};
   if (roles.includes('patient')) {
-    const [rows]: any = await pool.execute('CALL spGetPatientProfile(?)', [userId]);
-    profileRec = rows[0]?.[0] || {};
+    const [pRows]: any = await pool.execute('CALL spGetPatientProfile(?)', [userId]);
+    profileRec = pRows[0]?.[0] || {};
   } else if (roles.includes('physician')) {
-    const [rows]: any = await pool.execute('CALL spGetPhysicianProfile(?)', [userId]);
-    profileRec = rows[0]?.[0] || {};
-  } else /* admin */ {
-    const [rows]: any = await pool.execute('CALL spGetAdminProfile(?)', [userId]);
-    profileRec = rows[0]?.[0] || {};
+    const [dRows]: any = await pool.execute('CALL spGetPhysicianProfile(?)', [userId]);
+    profileRec = dRows[0]?.[0] || {};
+  } else {
+    const [aRows]: any = await pool.execute('CALL spGetAdminProfile(?)', [userId]);
+    profileRec = aRows[0]?.[0] || {};
   }
 
-  // 3) merge & send
+  // 3) merge & return
   res.json({
     id:       user.Id,
     username: user.Username,
@@ -50,60 +45,119 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 router.put('/', authenticate, async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
   const roles  = (req.user as JwtPayload).roles;
-  const b      = req.body;
+  const b      = req.body as any;
 
   if (roles.includes('patient')) {
+    const {
+      First_Name,
+      Last_Name,
+      Date_Of_Birth,
+      Medical_Record_Number,
+      Gender,
+      Contact_Phone,
+      Contact_Email,
+      Home_Address,
+      Primary_Care_Physician,
+      Insurance_Provider,
+      Insurance_Policy_Number,
+      Emergency_Contact_Name,
+      Emergency_Contact_Rel,
+      Known_Allergies,
+    } = b;
+
+    // now 15 placeholders: userId + 14 fields
     await pool.execute(
-      'CALL spUpdatePatientProfile(?,?,?,?,?,?,?,?,?,?,?,?)',
+      'CALL spUpdatePatientProfile(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [
         userId,
-        nullify(b.Medical_Record_Number),
-        nullify(b.Gender),
-        nullify(b.Contact_Phone),
-        nullify(b.Contact_Email),
-        nullify(b.Home_Address),
-        nullify(b.Primary_Care_Physician),
-        nullify(b.Insurance_Provider),
-        nullify(b.Insurance_Policy_Number),
-        nullify(b.Emergency_Contact_Name),
-        nullify(b.Emergency_Contact_Rel),
-        nullify(b.Known_Allergies),
+        nullify(First_Name),
+        nullify(Last_Name),
+        nullify(Date_Of_Birth),
+        nullify(Medical_Record_Number),
+        nullify(Gender),
+        nullify(Contact_Phone),
+        nullify(Contact_Email),
+        nullify(Home_Address),
+        nullify(Primary_Care_Physician),
+        nullify(Insurance_Provider),
+        nullify(Insurance_Policy_Number),
+        nullify(Emergency_Contact_Name),
+        nullify(Emergency_Contact_Rel),
+        nullify(Known_Allergies),
       ]
     );
 
   } else if (roles.includes('physician')) {
+    const {
+      First_Name,
+      Last_Name,
+      Role,
+      Medical_License_Number,
+      Specialty,
+      Department,
+      Office_Location,
+      Contact_Phone,
+      Contact_Email,
+      Office_Hours,
+      Board_Certifications,
+      Education,
+      Professional_Bio,
+    } = b;
+
+    // now 14 placeholders: userId + 13 fields
     await pool.execute(
-      'CALL spUpdatePhysicianProfile(?,?,?,?,?,?,?,?,?,?,?)',
+      'CALL spUpdatePhysicianProfile(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [
         userId,
-        nullify(b.Medical_License_Number),
-        nullify(b.Specialty),
-        nullify(b.Department),
-        nullify(b.Office_Location),
-        nullify(b.Contact_Phone),
-        nullify(b.Contact_Email),
-        nullify(b.Office_Hours),
-        nullify(b.Board_Certifications),
-        nullify(b.Education),
-        nullify(b.Professional_Bio),
+        nullify(First_Name),
+        nullify(Last_Name),
+        nullify(Role),
+        nullify(Medical_License_Number),
+        nullify(Specialty),
+        nullify(Department),
+        nullify(Office_Location),
+        nullify(Contact_Phone),
+        nullify(Contact_Email),
+        nullify(Office_Hours),
+        nullify(Board_Certifications),
+        nullify(Education),
+        nullify(Professional_Bio),
       ]
     );
 
   } else { // admin
+    const {
+      First_Name,
+      Last_Name,
+      Employee_ID,
+      Department,
+      Job_Title,
+      Contact_Phone,
+      Contact_Email,
+      Office_Location,
+      Permission_Level,
+      Work_Schedule,
+      Responsibilities,
+      Emergency_Contact,
+    } = b;
+
+    // 13 placeholders: userId + 12 fields
     await pool.execute(
-      'CALL spUpdateAdminProfile(?,?,?,?,?,?,?,?,?,?,?)',
+      'CALL spUpdateAdminProfile(?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [
         userId,
-        nullify(b.Employee_ID),
-        nullify(b.Department),
-        nullify(b.Job_Title),
-        nullify(b.Contact_Phone),
-        nullify(b.Contact_Email),
-        nullify(b.Office_Location),
-        nullify(b.Permission_Level),
-        nullify(b.Work_Schedule),
-        nullify(b.Responsibilities),
-        nullify(b.Emergency_Contact),
+        nullify(First_Name),
+        nullify(Last_Name),
+        nullify(Employee_ID),
+        nullify(Department),
+        nullify(Job_Title),
+        nullify(Contact_Phone),
+        nullify(Contact_Email),
+        nullify(Office_Location),
+        nullify(Permission_Level),
+        nullify(Work_Schedule),
+        nullify(Responsibilities),
+        nullify(Emergency_Contact),
       ]
     );
   }

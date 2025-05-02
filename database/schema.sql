@@ -6,7 +6,9 @@ CREATE DATABASE IF NOT EXISTS HMSS_DB
   COLLATE utf8mb4_unicode_ci;
 USE HMSS_DB;
 
+-- ================================================
 -- 2) Core user & item tables
+-- ================================================
 CREATE TABLE IF NOT EXISTS `Users` (
   `Id`                 INT            NOT NULL AUTO_INCREMENT,
   `Username`           VARCHAR(100)   NOT NULL UNIQUE,
@@ -29,7 +31,9 @@ CREATE TABLE IF NOT EXISTS `Items` (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
+-- ================================================
 -- 3) Patient profile (one-to-one with Users)
+-- ================================================
 CREATE TABLE IF NOT EXISTS `PATIENT` (
   `Patient_ID`              INT            NOT NULL AUTO_INCREMENT,
   `User_Id`                 INT            NOT NULL UNIQUE,
@@ -53,33 +57,39 @@ CREATE TABLE IF NOT EXISTS `PATIENT` (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
+-- ================================================
 -- 4) Physician profile (one-to-one with Users)
+-- ================================================
 CREATE TABLE IF NOT EXISTS `PHYSICIAN` (
-  `Physician_ID`            INT            NOT NULL AUTO_INCREMENT,
-  `User_Id`                 INT            NOT NULL UNIQUE,
-  `First_Name`              VARCHAR(50)    NOT NULL,
-  `Last_Name`               VARCHAR(50)    NOT NULL,
-  `Role`                    VARCHAR(50)    NULL,
-  `Medical_License_Number`  VARCHAR(50)    NULL,
-  `Specialty`               VARCHAR(100)   NULL,
-  `Department`              VARCHAR(100)   NULL,
-  `Office_Location`         VARCHAR(100)   NULL,
-  `Contact_Phone`           VARCHAR(20)    NULL,
-  `Contact_Email`           VARCHAR(100)   NULL,
-  `Office_Hours`            VARCHAR(100)   NULL,
-  `Board_Certifications`    VARCHAR(255)   NULL,
-  `Education`               TEXT           NULL,
-  `Professional_Bio`        TEXT           NULL,
+  `Physician_ID`           INT            NOT NULL AUTO_INCREMENT,
+  `User_Id`                INT            NOT NULL UNIQUE,
+  `First_Name`             VARCHAR(50)    NOT NULL,
+  `Last_Name`              VARCHAR(50)    NOT NULL,
+  `Role`                   VARCHAR(50)    NULL,
+  `Medical_License_Number` VARCHAR(50)    NULL,
+  `Specialty`              VARCHAR(100)   NULL,
+  `Department`             VARCHAR(100)   NULL,
+  `Office_Location`        VARCHAR(100)   NULL,
+  `Contact_Phone`          VARCHAR(20)    NULL,
+  `Contact_Email`          VARCHAR(100)   NULL,
+  `Office_Hours`           VARCHAR(100)   NULL,
+  `Board_Certifications`   VARCHAR(255)   NULL,
+  `Education`              TEXT           NULL,
+  `Professional_Bio`       TEXT           NULL,
   PRIMARY KEY (`Physician_ID`),
   FOREIGN KEY (`User_Id`) REFERENCES `Users`(`Id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
--- 5) Admin profile (already had User_Id)
+-- ================================================
+-- 5) Admin profile (one-to-one with Users)
+-- ================================================
 CREATE TABLE IF NOT EXISTS `ADMIN_PROFILE` (
   `Admin_ID`            INT            NOT NULL AUTO_INCREMENT,
   `User_Id`             INT            NOT NULL UNIQUE,
+  `First_Name`          VARCHAR(50)    NOT NULL,
+  `Last_Name`           VARCHAR(50)    NOT NULL,
   `Employee_ID`         VARCHAR(50)    NULL,
   `Department`          VARCHAR(100)   NULL,
   `Job_Title`           VARCHAR(100)   NULL,
@@ -98,7 +108,7 @@ CREATE TABLE IF NOT EXISTS `ADMIN_PROFILE` (
 
 -- ================================================
 -- 6) Medication & clinical documentation tables
---    (retain existing definitions, add collation)
+--    (retained definitions; added charset/collation)
 -- ================================================
 CREATE TABLE IF NOT EXISTS `MEDICATION` (
   `Medication_ID`     INT           NOT NULL AUTO_INCREMENT,
