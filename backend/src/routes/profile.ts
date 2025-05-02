@@ -51,7 +51,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const {
       First_Name,
       Last_Name,
-      Date_Of_Birth,
+      Date_Of_Birth,            // incoming ISO string
       Medical_Record_Number,
       Gender,
       Contact_Phone,
@@ -65,6 +65,11 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
       Known_Allergies,
     } = b;
 
+    // convert ISO datetime → YYYY-MM-DD or null
+    const dobFormatted = Date_Of_Birth
+      ? new Date(Date_Of_Birth).toISOString().slice(0, 10)
+      : null;
+
     // now 15 placeholders: userId + 14 fields
     await pool.execute(
       'CALL spUpdatePatientProfile(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -72,7 +77,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
         userId,
         nullify(First_Name),
         nullify(Last_Name),
-        nullify(Date_Of_Birth),
+        nullify(dobFormatted),
         nullify(Medical_Record_Number),
         nullify(Gender),
         nullify(Contact_Phone),
