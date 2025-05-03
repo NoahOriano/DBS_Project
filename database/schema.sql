@@ -367,3 +367,30 @@ CREATE TABLE IF NOT EXISTS NOTIFICATION (
 -- Grouping: Pharmacy, Lab, and Notification Modules (g, h, i)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
+-- Merged `bed info` tables code
+CREATE TABLE IF NOT EXISTS BED (
+  Bed_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Bed_Number VARCHAR(10) UNIQUE NOT NULL,
+  Ward VARCHAR(50),
+  Status ENUM('Available', 'Occupied') DEFAULT 'Available'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS BED_ASSIGNMENT (
+  Assignment_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Bed_ID INT NOT NULL,
+  Patient_ID INT NOT NULL,
+  Assigned_Date DATE NOT NULL,
+  Released_Date DATE,
+  FOREIGN KEY (Bed_ID) REFERENCES BED(Bed_ID),
+  FOREIGN KEY (Patient_ID) REFERENCES PATIENT(Patient_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS DISCHARGE_LOG (
+  Discharge_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Patient_ID INT NOT NULL,
+  Physician_ID INT NOT NULL,
+  Discharge_Date DATE NOT NULL,
+  Summary TEXT,
+  FOREIGN KEY (Patient_ID) REFERENCES PATIENT(Patient_ID),
+  FOREIGN KEY (Physician_ID) REFERENCES PHYSICIAN(Physician_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

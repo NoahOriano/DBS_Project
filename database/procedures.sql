@@ -466,3 +466,162 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- ===================================================================
+-- Grouping Three: Pharmacy, Lab
+-- ===================================================================
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_addPharmacist (
+    IN p_First_Name VARCHAR(50),
+    IN p_Last_Name VARCHAR(50),
+    IN p_Email VARCHAR(100),
+    IN p_Phone VARCHAR(20)
+)
+BEGIN
+    INSERT INTO PHARMACIST (First_Name, Last_Name, Email, Phone)
+    VALUES (p_First_Name, p_Last_Name, p_Email, p_Phone);
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_addLabTechnician (
+    IN p_First_Name VARCHAR(50),
+    IN p_Last_Name VARCHAR(50),
+    IN p_Email VARCHAR(100),
+    IN p_Phone VARCHAR(20)
+)
+BEGIN
+    INSERT INTO LAB_TECHNICIAN (First_Name, Last_Name, Email, Phone)
+    VALUES (p_First_Name, p_Last_Name, p_Email, p_Phone);
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_addLabTest (
+    IN p_Patient_ID INT,
+    IN p_Physician_ID INT,
+    IN p_Technician_ID INT,
+    IN p_Test_Type VARCHAR(100),
+    IN p_Date_Ordered DATE
+)
+BEGIN
+    INSERT INTO LAB_TEST (Patient_ID, Physician_ID, Technician_ID, Test_Type, Result_Status, Date_Ordered)
+    VALUES (p_Patient_ID, p_Physician_ID, p_Technician_ID, p_Test_Type, 'Pending', p_Date_Ordered);
+
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    VALUES (p_Technician_ID, p_Physician_ID, CONCAT('Lab Test Ordered: ', p_Test_Type, ' for Patient ID ', p_Patient_ID));
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_updateLabTestResults (
+    IN p_LabTest_ID INT,
+    IN p_Test_Results TEXT,
+    IN p_Date_Completed DATE
+)
+BEGIN
+    DECLARE v_Patient_ID INT;
+    DECLARE v_Physician_ID INT;
+
+    UPDATE LAB_TEST
+    SET Test_Results = p_Test_Results,
+        Result_Status = 'Completed',
+        Date_Completed = p_Date_Completed
+    WHERE LabTest_ID = p_LabTest_ID;
+
+    SELECT Patient_ID, Physician_ID
+    INTO v_Patient_ID, v_Physician_ID
+    FROM LAB_TEST
+    WHERE LabTest_ID = p_LabTest_ID;
+
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    VALUES (v_Physician_ID, v_Patient_ID, CONCAT('Lab Test Result Available: ', p_Test_Results));
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_addNotification (
+    IN p_Sender_ID INT,
+    IN p_Receiver_ID INT,
+    IN p_Message TEXT
+)
+BEGIN
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    VALUES (p_Sender_ID, p_Receiver_ID, p_Message);
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_getAllNotificationsForUser (
+    IN p_User_ID INT
+)
+BEGIN
+    SELECT Notification_ID, Sender_ID, Receiver_ID, Message, Timestamp
+    FROM NOTIFICATION
+    WHERE Receiver_ID = p_User_ID
+    ORDER BY Timestamp DESC;
+END $$
+
+DELIMITER ;
+
+-- ===================================================================
+--assign bed, discharge log
+-- ===================================================================
+DELIMITER $$
+
+CREATE PROCEDURE sp_assignBedToPatient (
+    IN p_Bed_ID INT,
+    IN p_Patient_ID INT,
+    IN p_Assigned_Date DATE
+)
+BEGIN
+  IF (SELECT Status FROM BED WHERE Bed_ID = p_Bed_ID) = 'Available' THEN
+    INSERT INTO BED_ASSIGNMENT (Bed_ID, Patient_ID, Assigned_Date)
+    VALUES (p_Bed_ID, p_Patient_ID, p_Assigned_Date);
+
+    UPDATE BED SET Status = 'Occupied' WHERE Bed_ID = p_Bed_ID;
+  ELSE
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Bed is already occupied.';
+  END IF;
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_dischargePatient (
+    IN p_Patient_ID INT,
+    IN p_Physician_ID INT,
+    IN p_Discharge_Date DATE,
+    IN p_Summary TEXT
+)
+BEGIN
+  INSERT INTO DISCHARGE_LOG (Patient_ID, Physician_ID, Discharge_Date, Summary)
+  VALUES (p_Patient_ID, p_Physician_ID, p_Discharge_Date, p_Summary);
+
+  UPDATE BED_ASSIGNMENT
+  SET Released_Date = p_Discharge_Date
+  WHERE Patient_ID = p_Patient_ID AND Released_Date IS NULL;
+
+  UPDATE BED
+  SET Status = 'Available'
+  WHERE Bed_ID IN (
+    SELECT Bed_ID FROM BED_ASSIGNMENT
+    WHERE Patient_ID = p_Patient_ID AND Released_Date = p_Discharge_Date
+  );
+END $$
+
+DELIMITER ;
