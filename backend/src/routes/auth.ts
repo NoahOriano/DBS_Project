@@ -7,50 +7,50 @@ import { authenticate, authorize, JwtPayload } from '../middleware/auth';
 const router = express.Router();
 
 // POST /api/auth/register
-// — patient self-signup (default role = "patient")
-/*router.post(
-  '/register',
-  async (req: Request, res: Response): Promise<void> => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      res.status(400).json({ message: 'Username and password are required' });
-      return;
-    }
-
-    const hash = await bcrypt.hash(password, 12);
-    await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, 'patient']);
-
-    res.status(201).json({ message: 'User created' });
-  }
-);*/
-
-// POST /api/auth/register
 router.post(
   '/register',
   async (req: Request, res: Response): Promise<void> => {
     const { username, password, role } = req.body;
 
-    // Validate presence
+    // 1) Validate
     if (!username || !password || !role) {
       res.status(400).json({ message: 'Username, password and role are required' });
       return;
     }
-
-    // Validate allowed roles
     const allowed = ['patient', 'physician', 'admin'];
     if (!allowed.includes(role)) {
       res.status(400).json({ message: 'Role must be one of: patient, physician, admin' });
       return;
     }
 
-    // Hash password and create user
+    // 2) Hash + create user
     const hash = await bcrypt.hash(password, 12);
-    await pool.execute(
-      'CALL spCreateUser(?, ?, ?)',
-      [username, hash, role]
-    );
+    await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, role]);
 
-    res.status(201).json({ message: 'User created' });
+    // 3) Lookup the new user's Id
+    const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
+    const userId: number = userRows[0][0].Id;
+
+    // 4) Initialize their profile row
+    if (role === 'patient') {
+      await pool.execute(
+        'INSERT IGNORE INTO PATIENT (User_Id) VALUES(?)',
+        [userId]
+      );
+    } else if (role === 'physician') {
+      await pool.execute(
+        'INSERT IGNORE INTO PHYSICIAN (User_Id) VALUES(?)',
+        [userId]
+      );
+    } else { // admin
+      await pool.execute(
+        'INSERT IGNORE INTO ADMIN_PROFILE (User_Id) VALUES(?)',
+        [userId]
+      );
+    }
+
+    // 5) Finish
+    res.status(201).json({ message: 'User created and profile initialized' });
   }
 );
 
@@ -224,6 +224,44 @@ router.post(
     await pool.execute('CALL spChangePassword(?, ?)', [data.Id, hash]);
 
     res.json({ message: 'Password reset successfully' });
+  }
+);
+
+// GET /api/auth/me
+router.get(
+  '/me',
+  authenticate,
+  async (req, res) => {
+    const userId = (req.user as JwtPayload).id;
+    const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
+    const u = rows[0][0];
+    res.json({
+      id: u.Id,
+      username: u.Username,
+      roles: u.Roles.split(','),
+      securityQuestion: u.SecurityQuestion,
+    });
+  }
+);
+
+// PUT /api/auth/me
+router.put(
+  '/me',
+  authenticate,
+  async (req, res) => {
+    const userId = (req.user as JwtPayload).id;
+    const { securityQuestion, securityAnswer } = req.body;
+    if (!securityQuestion || !securityAnswer) {
+      res.status(400).json({ message: 'Question and answer are required' });
+      return;
+    }
+    const hash = await bcrypt.hash(securityAnswer, 12);
+    await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [
+      userId,
+      securityQuestion,
+      hash,
+    ]);
+    res.json({ message: 'Profile updated' });
   }
 );
 

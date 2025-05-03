@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import NavBar from './components/NavBar';
 import { useAuth } from './auth';
 import { JSX } from 'react';
+import Profile from './pages/Profile';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -28,6 +29,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Profile />
             </PrivateRoute>
           }
         />
