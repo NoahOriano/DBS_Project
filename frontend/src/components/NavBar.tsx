@@ -1,37 +1,35 @@
+// src/components/NavBar.tsx
+
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 export default function NavBar() {
-  const { token, logout } = useAuth();
+  const { token, roles = [], logout } = useAuth();
+  const linkStyle = { margin: '0 1rem', color: '#fff', textDecoration: 'none' };
 
   return (
     <nav style={{ padding: '0.5rem 1rem', background: '#222', color: '#fff' }}>
-      <Link
-        to="/"
-        style={{ marginRight: '1rem', color: '#fff', textDecoration: 'none' }}
-      >
+      <Link to="/" style={{ marginRight: '1rem', color: '#fff', textDecoration: 'none' }}>
         Home
       </Link>
 
       {token ? (
         <>
-          <Link
-            to="/dashboard"
-            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
-          >
+          <Link to="/dashboard" style={linkStyle}>
             Dashboard
           </Link>
-          <Link
-            to="/profile"
-            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
-          >
+          <Link to="/profile" style={linkStyle}>
             Profile
           </Link>
-          <Link
-            to="/change-password"
-            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
-          >
+          <Link to="/change-password" style={linkStyle}>
             Change Password
+          </Link>
+
+          <Link to="/appointments" style={linkStyle}>
+            Appointments
+          </Link>
+          <Link to="/payments" style={linkStyle}>
+            Payments
           </Link>
           <button
             onClick={logout}
@@ -48,22 +46,13 @@ export default function NavBar() {
         </>
       ) : (
         <>
-          <Link
-            to="/login"
-            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
-          >
+          <Link to="/login" style={linkStyle}>
             Login
           </Link>
-          <Link
-            to="/forgot-password"
-            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
-          >
+          <Link to="/forgot-password" style={linkStyle}>
             Forgot Password
           </Link>
-          <Link
-            to="/register"
-            style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
-          >
+          <Link to="/register" style={linkStyle}>
             Register
           </Link>
         </>

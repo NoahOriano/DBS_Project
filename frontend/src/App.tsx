@@ -9,6 +9,8 @@ import NavBar from './components/NavBar';
 import { useAuth } from './auth';
 import { JSX } from 'react';
 import Profile from './pages/Profile';
+import PatientAppointments from './pages/PatientAppointments';
+import PatientPayments     from './pages/PatientPayments';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -45,6 +47,22 @@ export default function App() {
           element={
             <PrivateRoute>
               <ChangePassword />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments"
+          element={
+            <PrivateRoute>
+              <PatientAppointments />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/payments"
+          element={
+            <PrivateRoute>
+              <PatientPayments />
             </PrivateRoute>
           }
         />
