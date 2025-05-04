@@ -1,8 +1,12 @@
-import 'express-serve-static-core';
+// src/types/express.d.ts
 import { JwtPayload } from '../middleware/auth';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: JwtPayload;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
   }
 }
+
+export {};

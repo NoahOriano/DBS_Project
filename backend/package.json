@@ -14,7 +14,8 @@
         "express-jwt-middleware": "^1.0.3",
         "jsonwebtoken": "^9.0.2",
         "jwt-decode": "^4.0.0",
-        "mssql": "^10.0.1"
+        "mssql": "^10.0.1",
+        "mysql2": "^3.14.1"
     },
     "devDependencies": {
         "@types/bcrypt": "^5.0.0",

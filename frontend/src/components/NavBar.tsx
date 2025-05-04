@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 export default function NavBar() {
-  const { token, logout } = useAuth();
+  const { token, user, logout } = useAuth();
 
   return (
     <nav style={{ padding: '0.5rem 1rem', background: '#222', color: '#fff' }}>
@@ -21,6 +21,16 @@ export default function NavBar() {
           >
             Dashboard
           </Link>
+          
+          {user?.roles.includes('physician') && (
+            <Link
+              to="/physician/dashboard"
+              style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}
+            >
+              Physician Dashboard
+            </Link>
+          )}
+          
           <Link
             to="/profile"
             style={{ margin: '0 1rem', color: '#fff', textDecoration: 'none' }}

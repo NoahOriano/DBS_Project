@@ -473,6 +473,8 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addPharmacist$$
+
 CREATE PROCEDURE sp_addPharmacist (
     IN p_First_Name VARCHAR(50),
     IN p_Last_Name VARCHAR(50),
@@ -488,6 +490,8 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addLabTechnician$$
+
 CREATE PROCEDURE sp_addLabTechnician (
     IN p_First_Name VARCHAR(50),
     IN p_Last_Name VARCHAR(50),
@@ -502,6 +506,8 @@ END $$
 DELIMITER ;
 
 DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_addLabTest$$
 
 CREATE PROCEDURE sp_addLabTest (
     IN p_Patient_ID INT,
@@ -521,6 +527,8 @@ END $$
 DELIMITER ;
 
 DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_updateLabTestResults$$
 
 CREATE PROCEDURE sp_updateLabTestResults (
     IN p_LabTest_ID INT,
@@ -550,6 +558,8 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addNotification$$
+
 CREATE PROCEDURE sp_addNotification (
     IN p_Sender_ID INT,
     IN p_Receiver_ID INT,
@@ -564,6 +574,9 @@ DELIMITER ;
 
 DELIMITER $$
 
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_getAllNotificationsForUser$$
 CREATE PROCEDURE sp_getAllNotificationsForUser (
     IN p_User_ID INT
 )
@@ -576,11 +589,11 @@ END $$
 
 DELIMITER ;
 
--- ===================================================================
---assign bed, discharge log
--- ===================================================================
+-- assign bed, discharge log
+
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_assignBedToPatient$$
 CREATE PROCEDURE sp_assignBedToPatient (
     IN p_Bed_ID INT,
     IN p_Patient_ID INT,
@@ -602,6 +615,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_dischargePatient$$
 CREATE PROCEDURE sp_dischargePatient (
     IN p_Patient_ID INT,
     IN p_Physician_ID INT,
@@ -622,6 +636,279 @@ BEGIN
     SELECT Bed_ID FROM BED_ASSIGNMENT
     WHERE Patient_ID = p_Patient_ID AND Released_Date = p_Discharge_Date
   );
+END $$
+
+DELIMITER ;
+-- 4.3 After Visit Summary-SOAP (Retrieval)
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_getSOAPEntries$$
+CREATE PROCEDURE sp_getSOAPEntries (
+    IN p_Patient_ID INT,
+    IN p_StartDate DATE,
+    IN p_EndDate DATE
+)
+BEGIN
+    SELECT 
+        s.SOAP_ID,
+        s.Patient_ID,
+        s.Physician_ID,
+        s.Note_DateTime,
+        s.Subjective,
+        s.Objective,
+        s.Assessment,
+        s.Plan,
+        CONCAT(p.First_Name, ' ', p.Last_Name) as Patient_Name,
+        CONCAT(ph.First_Name, ' ', ph.Last_Name) as Physician_Name
+    FROM SOAP_ENTRIES s
+    JOIN PATIENT p ON s.Patient_ID = p.Patient_ID
+    JOIN PHYSICIAN ph ON s.Physician_ID = ph.Physician_ID
+    WHERE s.Patient_ID = p_Patient_ID
+    AND DATE(s.Note_DateTime) BETWEEN p_StartDate AND p_EndDate
+    ORDER BY s.Note_DateTime DESC;
+END $$
+
+DROP PROCEDURE IF EXISTS sp_getLatestSOAPEntry$$
+CREATE PROCEDURE sp_getLatestSOAPEntry (
+    IN p_Patient_ID INT
+)
+BEGIN
+    SELECT 
+        s.SOAP_ID,
+        s.Patient_ID,
+        s.Physician_ID,
+        s.Note_DateTime,
+        s.Subjective,
+        s.Objective,
+        s.Assessment,
+        s.Plan,
+        CONCAT(p.First_Name, ' ', p.Last_Name) as Patient_Name,
+        CONCAT(ph.First_Name, ' ', ph.Last_Name) as Physician_Name
+    FROM SOAP_ENTRIES s
+    JOIN PATIENT p ON s.Patient_ID = p.Patient_ID
+    JOIN PHYSICIAN ph ON s.Physician_ID = ph.Physician_ID
+    WHERE s.Patient_ID = p_Patient_ID
+    ORDER BY s.Note_DateTime DESC
+    LIMIT 1;
+END $$
+
+DELIMITER ;
+
+-- 4.4 Prescribe Labs tests (Enhanced)
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_addLabTestWithNotification$$
+CREATE PROCEDURE sp_addLabTestWithNotification (
+    IN p_Patient_ID INT,
+    IN p_Physician_ID INT,
+    IN p_Test_Type VARCHAR(100),
+    IN p_Date_Ordered DATE,
+    IN p_Urgency VARCHAR(20) -- 'Routine', 'Urgent', 'STAT'
+)
+BEGIN
+    DECLARE v_LabTest_ID INT;
+    DECLARE v_Patient_Name VARCHAR(100);
+    DECLARE v_Physician_Name VARCHAR(100);
+    
+    -- Insert lab test
+    INSERT INTO LAB_TEST (Patient_ID, Physician_ID, Test_Type, Result_Status, Date_Ordered)
+    VALUES (p_Patient_ID, p_Physician_ID, p_Test_Type, 'Pending', p_Date_Ordered);
+    
+    SET v_LabTest_ID = LAST_INSERT_ID();
+    
+    -- Get names for notification
+    SELECT CONCAT(First_Name, ' ', Last_Name) INTO v_Patient_Name
+    FROM PATIENT WHERE Patient_ID = p_Patient_ID;
+    
+    SELECT CONCAT(First_Name, ' ', Last_Name) INTO v_Physician_Name
+    FROM PHYSICIAN WHERE Physician_ID = p_Physician_ID;
+    
+    -- Notify patient
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    SELECT ph.User_Id, p.User_Id, 
+           CONCAT('Lab Test Ordered: ', p_Test_Type, ' (', p_Urgency, ') by Dr. ', v_Physician_Name)
+    FROM PHYSICIAN ph
+    JOIN PATIENT p ON p.Patient_ID = p_Patient_ID
+    WHERE ph.Physician_ID = p_Physician_ID;
+    
+    -- Notify lab technicians
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    SELECT ph.User_Id, u.Id,
+           CONCAT('New ', p_Urgency, ' Lab Test: ', p_Test_Type, ' for patient ', v_Patient_Name)
+    FROM PHYSICIAN ph
+    CROSS JOIN Users u
+    WHERE ph.Physician_ID = p_Physician_ID
+    AND u.Roles LIKE '%lab_technician%';
+    
+    SELECT v_LabTest_ID as New_LabTest_ID;
+END $$
+
+DROP PROCEDURE IF EXISTS sp_getPatientLabTests$$
+CREATE PROCEDURE sp_getPatientLabTests (
+    IN p_Patient_ID INT
+)
+BEGIN
+    SELECT 
+        lt.LabTest_ID,
+        lt.Test_Type,
+        lt.Date_Ordered,
+        lt.Date_Completed,
+        lt.Result_Status,
+        lt.Test_Results,
+        CONCAT(ph.First_Name, ' ', ph.Last_Name) as Ordering_Physician,
+        CONCAT(t.First_Name, ' ', t.Last_Name) as Technician
+    FROM LAB_TEST lt
+    JOIN PHYSICIAN ph ON lt.Physician_ID = ph.Physician_ID
+    LEFT JOIN LAB_TECHNICIAN t ON lt.Technician_ID = t.Technician_ID
+    WHERE lt.Patient_ID = p_Patient_ID
+    ORDER BY lt.Date_Ordered DESC;
+END $$
+
+DELIMITER ;
+
+-- 4.5 Prescribe Meds (Enhanced)
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_prescribeMedication$$
+CREATE PROCEDURE sp_prescribeMedication (
+    IN p_Physician_ID INT,
+    IN p_Patient_ID INT,
+    IN p_Medication_Name VARCHAR(100),
+    IN p_Dosage VARCHAR(50),
+    IN p_Frequency VARCHAR(50),
+    IN p_Refills INT,
+    IN p_Notes TEXT
+)
+BEGIN
+    DECLARE v_Prescription_ID INT;
+    DECLARE v_Medication_ID INT;
+    DECLARE v_Patient_Name VARCHAR(100);
+    
+    -- Check if medication exists, if not create it
+    SELECT Medication_ID INTO v_Medication_ID
+    FROM MEDICATION
+    WHERE Medication_Name = p_Medication_Name
+    LIMIT 1;
+    
+    IF v_Medication_ID IS NULL THEN
+        INSERT INTO MEDICATION (Medication_Name)
+        VALUES (p_Medication_Name);
+        SET v_Medication_ID = LAST_INSERT_ID();
+    END IF;
+    
+    -- Create prescription
+    INSERT INTO PRESCRIPTION (Prescribing_Physician_ID, Patient_ID, Issued_Date, Notes)
+    VALUES (p_Physician_ID, p_Patient_ID, CURDATE(), p_Notes);
+    
+    SET v_Prescription_ID = LAST_INSERT_ID();
+    
+    -- Add medication to prescription
+    INSERT INTO PRESCRIPTION_MEDICATION 
+        (Prescription_ID, Medication_ID, Dosage, Frequency, Refills)
+    VALUES 
+        (v_Prescription_ID, v_Medication_ID, p_Dosage, p_Frequency, p_Refills);
+    
+    -- Get patient name for notification
+    SELECT CONCAT(First_Name, ' ', Last_Name) INTO v_Patient_Name
+    FROM PATIENT WHERE Patient_ID = p_Patient_ID;
+    
+    -- Notify patient
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    SELECT ph.User_Id, p.User_Id,
+           CONCAT('New prescription: ', p_Medication_Name, ' - ', p_Dosage, ', ', p_Frequency)
+    FROM PHYSICIAN ph
+    JOIN PATIENT p ON p.Patient_ID = p_Patient_ID
+    WHERE ph.Physician_ID = p_Physician_ID;
+    
+    -- Notify pharmacists
+    INSERT INTO NOTIFICATION (Sender_ID, Receiver_ID, Message)
+    SELECT ph.User_Id, u.Id,
+           CONCAT('New prescription for ', v_Patient_Name, ': ', p_Medication_Name)
+    FROM PHYSICIAN ph
+    CROSS JOIN Users u
+    WHERE ph.Physician_ID = p_Physician_ID
+    AND u.Roles LIKE '%pharmacist%';
+    
+    SELECT v_Prescription_ID as New_Prescription_ID;
+END $$
+
+DROP PROCEDURE IF EXISTS sp_getPatientPrescriptions$$
+CREATE PROCEDURE sp_getPatientPrescriptions (
+    IN p_Patient_ID INT
+)
+BEGIN
+    SELECT 
+        p.Prescription_ID,
+        p.Issued_Date,
+        p.Notes,
+        CONCAT(ph.First_Name, ' ', ph.Last_Name) as Prescribing_Physician,
+        m.Medication_Name,
+        pm.Dosage,
+        pm.Frequency,
+        pm.Refills
+    FROM PRESCRIPTION p
+    JOIN PHYSICIAN ph ON p.Prescribing_Physician_ID = ph.Physician_ID
+    JOIN PRESCRIPTION_MEDICATION pm ON p.Prescription_ID = pm.Prescription_ID
+    JOIN MEDICATION m ON pm.Medication_ID = m.Medication_ID
+    WHERE p.Patient_ID = p_Patient_ID
+    ORDER BY p.Issued_Date DESC;
+END $$
+
+DELIMITER ;
+
+-- Additional Helper Procedures
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_getAvailableBeds$$
+CREATE PROCEDURE sp_getAvailableBeds()
+BEGIN
+    SELECT 
+        Bed_ID,
+        Bed_Number,
+        Ward,
+        Status
+    FROM BED
+    WHERE Status = 'Available'
+    ORDER BY Ward, Bed_Number;
+END $$
+
+DROP PROCEDURE IF EXISTS sp_getPatientCurrentBed$$
+CREATE PROCEDURE sp_getPatientCurrentBed (
+    IN p_Patient_ID INT
+)
+BEGIN
+    SELECT 
+        b.Bed_ID,
+        b.Bed_Number,
+        b.Ward,
+        ba.Assigned_Date
+    FROM BED b
+    JOIN BED_ASSIGNMENT ba ON b.Bed_ID = ba.Bed_ID
+    WHERE ba.Patient_ID = p_Patient_ID
+    AND ba.Released_Date IS NULL;
+END $$
+
+DROP PROCEDURE IF EXISTS sp_getPhysicianPatients$$
+CREATE PROCEDURE sp_getPhysicianPatients (
+    IN p_Physician_ID INT
+)
+BEGIN
+    SELECT DISTINCT
+        p.Patient_ID,
+        CONCAT(p.First_Name, ' ', p.Last_Name) as Patient_Name,
+        p.Date_Of_Birth,
+        p.Medical_Record_Number,
+        p.Contact_Phone,
+        p.Contact_Email
+    FROM PATIENT p
+    WHERE p.Patient_ID IN (
+        SELECT Patient_ID FROM PRESCRIPTION WHERE Prescribing_Physician_ID = p_Physician_ID
+        UNION
+        SELECT Patient_ID FROM SOAP_ENTRIES WHERE Physician_ID = p_Physician_ID
+        UNION
+        SELECT Patient_ID FROM LAB_TEST WHERE Physician_ID = p_Physician_ID
+    )
+    ORDER BY p.Last_Name, p.First_Name;
 END $$
 
 DELIMITER ;
