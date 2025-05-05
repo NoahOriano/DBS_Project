@@ -45,7 +45,7 @@ export default function PatientDetail() {
   const fetchPatientDetails = async () => {
     try {
       const response = await api.get(`/physician/patient/${patientId}`);
-      setPatient(response.data);
+      setPatient(response.data as PatientDetails);
     } catch (err) {
       setError('Failed to load patient details');
       console.error(err);
@@ -57,7 +57,7 @@ export default function PatientDetail() {
   const fetchCurrentBed = async () => {
     try {
       const response = await api.get(`/physician/patient/${patientId}/bed`);
-      setCurrentBed(response.data);
+      setCurrentBed(response.data as CurrentBed);
     } catch (err) {
       // Patient might not have a bed assigned
       console.error('No bed assigned or error fetching bed info:', err);

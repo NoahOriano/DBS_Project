@@ -28,7 +28,7 @@ export default function DischargePatient() {
   const fetchPatientInfo = async () => {
     try {
       const response = await api.get(`/physician/patient/${patientId}`);
-      setPatient(response.data);
+      setPatient(response.data as PatientInfo);
     } catch (err) {
       setError('Failed to load patient information');
       console.error(err);

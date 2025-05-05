@@ -31,7 +31,7 @@ interface PrivateRouteProps {
 }
 
 function PrivateRoute({ children, roles }: PrivateRouteProps) {
-  const { token, user } = useAuth();
+  const { token, user } = useAuth() as { token: string; user?: { roles: string[] } };
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -159,10 +159,10 @@ export default function App() {
             </PrivateRoute>
           }
         />
-        <Route path="/admin/beds" element={<PrivateRoute><BedAdmin/></PrivateRoute>} />
-        <Route path="/admin/schedule" element={<PrivateRoute><PhysicianScheduleAdmin/></PrivateRoute>} />
-        <Route path="/admin/bed-rates" element={<PrivateRoute><BedRateAdmin/></PrivateRoute>} />
-        <Route path="/admin/invoice/:billId" element={<PrivateRoute><InvoiceViewer/></PrivateRoute>} />
+        <Route path="/admin/beds" element={<PrivateRoute roles={['admin']}><BedAdmin/></PrivateRoute>} />
+        <Route path="/admin/schedule" element={<PrivateRoute roles={['admin']}><PhysicianScheduleAdmin/></PrivateRoute>} />
+        <Route path="/admin/bed-rates" element={<PrivateRoute roles={['admin']}><BedRateAdmin/></PrivateRoute>} />
+        <Route path="/admin/invoice/:billId" element={<PrivateRoute roles={['admin']}><InvoiceViewer/></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

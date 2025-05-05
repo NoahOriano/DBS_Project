@@ -30,7 +30,7 @@ export default function BedManagement() {
 
   const fetchAvailableBeds = async () => {
     try {
-      const response = await api.get('/physician/beds/available');
+      const response = await api.get<Bed[]>('/physician/beds/available');
       setAvailableBeds(response.data);
     } catch (err) {
       setError('Failed to load available beds');
@@ -39,7 +39,7 @@ export default function BedManagement() {
 
   const fetchPatients = async () => {
     try {
-      const response = await api.get('/physician/patients');
+      const response = await api.get<Patient[]>('/physician/patients');
       setPatients(response.data);
     } catch (err) {
       setError('Failed to load patients');

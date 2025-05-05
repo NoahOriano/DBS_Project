@@ -90,11 +90,15 @@ router.delete('/bed-rates/:id', async (req, res) => {
   res.json({ message: 'Rate deleted' });
 });
 
-/* ====== 2.4  Invoice preview ====== */
 router.get('/invoice/:billId', async (req, res) => {
-  const [rows]: any = await pool.execute('CALL spGenerateInvoice(?)', [req.params.billId]);
-  if (!rows[0][0]) return res.status(404).json({ message: 'Bill not found' });
-  res.json(rows[0][0]);
+  const { billId } = req.params;
+  try {
+      const [result]: any = await pool.execute('CALL spGenerateInvoice(?)', [billId]);
+      res.json(result);
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Failed to generate invoice' });
+  }
 });
 
 export default router;

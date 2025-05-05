@@ -24,7 +24,7 @@ export default function PhysicianDashboard() {
   const fetchPatients = async () => {
     try {
       const response = await api.get('/physician/patients');
-      setPatients(response.data);
+      setPatients(response.data as Patient[]);
     } catch (err) {
       setError('Failed to load patients');
       console.error(err);

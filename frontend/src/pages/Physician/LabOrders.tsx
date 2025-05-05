@@ -43,7 +43,7 @@ export default function LabOrders() {
 
   const fetchPatients = async () => {
     try {
-      const response = await api.get('/physician/patients');
+      const response = await api.get<Patient[]>('/physician/patients');
       setPatients(response.data);
     } catch (err) {
       setError('Failed to load patients');
@@ -52,7 +52,7 @@ export default function LabOrders() {
 
   const fetchLabTests = async (patientId: string) => {
     try {
-      const response = await api.get(`/physician/lab/patient/${patientId}`);
+      const response = await api.get<LabTest[]>(`/physician/lab/patient/${patientId}`);
       setLabTests(response.data);
     } catch (err) {
       console.error('Failed to load lab tests:', err);

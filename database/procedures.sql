@@ -905,7 +905,6 @@ BEGIN
 END $$
 
 DELIMITER ;
-=======
 
 -- Aditional Procedures for Bed Management
 /* ------------ PHYSICIAN_SCHEDULE CRUD ------------- */

@@ -46,7 +46,7 @@ export default function Prescriptions() {
   const fetchPatients = async () => {
     try {
       const response = await api.get('/physician/patients');
-      setPatients(response.data);
+      setPatients(response.data as Patient[]);
     } catch (err) {
       setError('Failed to load patients');
     }
@@ -55,7 +55,7 @@ export default function Prescriptions() {
   const fetchPrescriptions = async (patientId: string) => {
     try {
       const response = await api.get(`/physician/prescriptions/patient/${patientId}`);
-      setPrescriptions(response.data);
+      setPrescriptions(response.data as Prescription[]);
     } catch (err) {
       console.error('Failed to load prescriptions:', err);
     }

@@ -13,25 +13,33 @@ type Invoice = {
 };
 
 export default function InvoiceViewer() {
-  const { billId } = useParams<{ billId: string }>();
-  const [inv,setInv] = useState<Invoice|null>(null);
-  const [err,setErr] = useState<string|null>(null);
+  const { billId } = useParams<{ billId?: string }>(); // Make billId optional
+  const [inv, setInv] = useState<Invoice | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Invoice>(`/admin/invoice/${billId}`)
-       .then(r=>setInv(r.data))
-       .catch(e=>setErr(e.response?.data?.message||'Not found'));
+    if (billId) {
+      // Fetch specific invoice if billId is provided
+      api.get<Invoice>(`/admin/invoice/${billId}`)
+        .then((r) => setInv(r.data))
+        .catch((e) => setErr(e.response?.data?.message || 'Not found'));
+    } else {
+      // Fetch generic invoice data if no billId is provided
+      api.get<Invoice>('/admin/invoice')
+        .then((r) => setInv(r.data))
+        .catch((e) => setErr(e.response?.data?.message || 'Failed to load invoices'));
+    }
   }, [billId]);
 
-  if (err)   return <p className="error">{err}</p>;
-  if (!inv)  return <p>Loading…</p>;
+  if (err) return <p className="error">{err}</p>;
+  if (!inv) return <p>Loading…</p>;
 
   return (
     <div className="page">
-      <h2>Invoice #{inv.Bill_ID}</h2>
+      <h2>{billId ? `Invoice #${inv.Bill_ID}` : 'Generic Invoice Viewer'}</h2>
       <p><strong>Patient:</strong> {inv.Patient}</p>
       <p><strong>Date:</strong> {inv.Bill_Date}</p>
-      <hr/>
+      <hr />
       <table>
         <tbody>
           <tr><td>Total Charges</td><td>${inv.Total_Charges.toFixed(2)}</td></tr>
