@@ -8,7 +8,18 @@ const router = Router();
 // shortcut – all endpoints require an *admin* JWT
 router.use(authenticate);
 
-/* ====== 2.1  Physician Schedule ====== */
+router.get('/physicians', async (_req: Request, res: Response) => {
+  try {
+    const [rows]: any = await pool.execute(
+      "SELECT Physician_ID, CONCAT(First_Name, ' ', Last_Name) AS Physician_Name FROM PHYSICIAN"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to load physicians' });
+  }
+});
+
 router.get('/physician-schedule/:physicianId', async (req, res) => {
   const [rows]: any = await pool.execute(
     'SELECT * FROM PHYSICIAN_SCHEDULE WHERE Physician_ID = ?',
