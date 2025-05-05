@@ -9,8 +9,10 @@ import NavBar from './components/NavBar';
 import { useAuth } from './auth';
 import { JSX } from 'react';
 import Profile from './pages/Profile';
+import PatientAppointments from './pages/PatientAppointments';
+import PatientPayments from './pages/PatientPayments';
 
-// Physician pages - These files need to exist in the correct location
+// Physician pages
 import PhysicianDashboard from './pages/physician/PhysicianDashboard';
 import BedManagement from './pages/physician/BedManagement';
 import SOAPNotes from './pages/physician/SOAPNotes';
@@ -26,22 +28,22 @@ interface PrivateRouteProps {
 
 function PrivateRoute({ children, roles }: PrivateRouteProps) {
   const { token, user } = useAuth();
-  
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
-  
+
   if (roles && user) {
     const userRoles = user.roles || [];
-    const hasRequiredRole = roles.some(role => 
+    const hasRequiredRole = roles.some(role =>
       userRoles.includes(role)
     );
-    
+
     if (!hasRequiredRole) {
       return <Navigate to="/dashboard" replace />;
     }
   }
-  
+
   return children;
 }
 
@@ -54,7 +56,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        
+
         {/* General authenticated routes */}
         <Route
           path="/dashboard"
@@ -80,7 +82,23 @@ export default function App() {
             </PrivateRoute>
           }
         />
-        
+        <Route
+          path="/appointments"
+          element={
+            <PrivateRoute>
+              <PatientAppointments />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/payments"
+          element={
+            <PrivateRoute>
+              <PatientPayments />
+            </PrivateRoute>
+          }
+        />
+
         {/* Physician routes */}
         <Route
           path="/physician/dashboard"
@@ -138,7 +156,7 @@ export default function App() {
             </PrivateRoute>
           }
         />
-        
+
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

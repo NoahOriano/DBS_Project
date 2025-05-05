@@ -1,3 +1,5 @@
+// backend/src/routes/auth.ts
+
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -10,13 +12,14 @@ const router = express.Router();
 router.post(
   '/register',
   async (req: Request, res: Response): Promise<void> => {
-    const { username, password, role } = req.body;
+    let { username, password, role } = req.body;
 
-    // 1) Validate
     if (!username || !password || !role) {
       res.status(400).json({ message: 'Username, password and role are required' });
       return;
     }
+
+    role = String(role).toLowerCase();
     const allowed = ['patient', 'physician', 'admin'];
     if (!allowed.includes(role)) {
       res.status(400).json({ message: 'Role must be one of: patient, physician, admin' });
@@ -24,33 +27,29 @@ router.post(
     }
 
     try {
-      // 2) Hash + create user
       const hash = await bcrypt.hash(password, 12);
       await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, role]);
 
-      // 3) Lookup the new user's Id
       const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
       const userId: number = userRows[0][0].Id;
 
-      // 4) Initialize their profile row - CHANGED UserId to User_Id
       if (role === 'patient') {
         await pool.execute(
           'INSERT IGNORE INTO PATIENT (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
-          [userId, '', ''] // Added First_Name and Last_Name as they are required fields
+          [userId, '', '']
         );
       } else if (role === 'physician') {
         await pool.execute(
           'INSERT IGNORE INTO PHYSICIAN (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
-          [userId, '', ''] // Added First_Name and Last_Name as they are required fields
+          [userId, '', '']
         );
-      } else { // admin
+      } else {
         await pool.execute(
           'INSERT IGNORE INTO ADMIN_PROFILE (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
-          [userId, '', ''] // Added First_Name and Last_Name as they are required fields
+          [userId, '', '']
         );
       }
 
-      // 5) Finish
       res.status(201).json({ message: 'User created and profile initialized' });
     } catch (error) {
       console.error('Registration error:', error);
@@ -70,24 +69,15 @@ router.post(
     }
 
     try {
-      // lookup user
-      const [rows]: any = await pool.execute(
-        'CALL spGetUserByUsername(?)',
-        [username]
-      );
+      const [rows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
       const user = rows[0][0];
       if (!user) {
         res.status(404).json({ message: 'User not found' });
         return;
       }
 
-      // hash the answer
       const answerHash = await bcrypt.hash(securityAnswer, 12);
-      // store question + hash
-      await pool.execute(
-        'CALL spSetSecurityQA(?, ?, ?)',
-        [user.Id, securityQuestion, answerHash]
-      );
+      await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [user.Id, securityQuestion, answerHash]);
 
       res.json({ message: 'Security question set successfully' });
     } catch (error) {
@@ -103,12 +93,14 @@ router.post(
   authenticate,
   authorize(['admin']),
   async (req: Request, res: Response) => {
-    const { username, password, roles } = req.body;
+    let { username, password, roles } = req.body;
     if (!username || !password || !Array.isArray(roles)) {
       res.status(400).json({ message: 'Username, password and roles are required' });
       return;
     }
-    if (roles.some((r: string) => !['admin', 'provider'].includes(r))) {
+
+    const normalized = roles.map((r: string) => String(r).toLowerCase());
+    if (normalized.some((r: string) => !['admin', 'provider'].includes(r))) {
       res.status(400).json({ message: 'Roles must be admin or provider' });
       return;
     }
@@ -118,7 +110,7 @@ router.post(
       await pool.execute('CALL spCreateUser(?, ?, ?)', [
         username,
         hash,
-        roles.join(','),
+        normalized.join(','),
       ]);
 
       res.status(201).json({ message: 'Admin/Provider user created' });
@@ -147,8 +139,10 @@ router.post(
         return;
       }
 
+      const rolesArray = (user.Roles as string).split(',').map((r: string) => r.trim().toLowerCase());
+
       const token = jwt.sign(
-        { id: user.Id, username, roles: user.Roles.split(',') },
+        { id: user.Id, username, roles: rolesArray },
         process.env.JWT_SECRET as string,
         { expiresIn: '2h' }
       );
@@ -198,10 +192,7 @@ router.get(
   async (req: Request, res: Response) => {
     const { username } = req.params;
     try {
-      const [rows]: any = await pool.execute(
-        'CALL spGetSecurityQAByUsername(?)',
-        [username]
-      );
+      const [rows]: any = await pool.execute('CALL spGetSecurityQAByUsername(?)', [username]);
       const data = rows[0][0];
       if (!data) {
         res.status(404).json({ message: 'User not found' });
@@ -230,10 +221,7 @@ router.post(
     }
 
     try {
-      const [rows]: any = await pool.execute(
-        'CALL spGetSecurityQAByUsername(?)',
-        [username]
-      );
+      const [rows]: any = await pool.execute('CALL spGetSecurityQAByUsername(?)', [username]);
       const data = rows[0][0];
       if (!data) {
         res.status(404).json({ message: 'User not found' });
@@ -270,10 +258,12 @@ router.get(
       const userId = (req.user as JwtPayload).id;
       const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
       const u = rows[0][0];
+      const rolesArray = (u.Roles as string).split(',').map((r: string) => r.trim().toLowerCase());
+
       res.json({
         id: u.Id,
         username: u.Username,
-        roles: u.Roles.split(','),
+        roles: rolesArray,
         securityQuestion: u.SecurityQuestion,
       });
     } catch (error) {
@@ -287,7 +277,7 @@ router.get(
 router.put(
   '/me',
   authenticate,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     const userId = (req.user as JwtPayload).id;
     const { securityQuestion, securityAnswer } = req.body;
     if (!securityQuestion || !securityAnswer) {
@@ -296,11 +286,7 @@ router.put(
     }
     try {
       const hash = await bcrypt.hash(securityAnswer, 12);
-      await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [
-        userId,
-        securityQuestion,
-        hash,
-      ]);
+      await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [userId, securityQuestion, hash]);
       res.json({ message: 'Profile updated' });
     } catch (error) {
       console.error('Update profile error:', error);
