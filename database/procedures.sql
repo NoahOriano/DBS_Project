@@ -473,6 +473,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addPharmacist$$
 CREATE PROCEDURE sp_addPharmacist (
     IN p_First_Name VARCHAR(50),
     IN p_Last_Name VARCHAR(50),
@@ -488,6 +489,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addLabTechnician$$
 CREATE PROCEDURE sp_addLabTechnician (
     IN p_First_Name VARCHAR(50),
     IN p_Last_Name VARCHAR(50),
@@ -503,6 +505,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addLabTest$$
 CREATE PROCEDURE sp_addLabTest (
     IN p_Patient_ID INT,
     IN p_Physician_ID INT,
@@ -522,6 +525,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_updateLabTestResults$$
 CREATE PROCEDURE sp_updateLabTestResults (
     IN p_LabTest_ID INT,
     IN p_Test_Results TEXT,
@@ -550,6 +554,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_addNotification$$
 CREATE PROCEDURE sp_addNotification (
     IN p_Sender_ID INT,
     IN p_Receiver_ID INT,
@@ -564,6 +569,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_getAllNotificationsForUser$$
 CREATE PROCEDURE sp_getAllNotificationsForUser (
     IN p_User_ID INT
 )
@@ -581,6 +587,7 @@ DELIMITER ;
 -- ===================================================================
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_assignBedToPatient$$
 CREATE PROCEDURE sp_assignBedToPatient (
     IN p_Bed_ID INT,
     IN p_Patient_ID INT,
@@ -602,6 +609,7 @@ DELIMITER ;
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_dischargePatient$$
 CREATE PROCEDURE sp_dischargePatient (
     IN p_Patient_ID INT,
     IN p_Physician_ID INT,
