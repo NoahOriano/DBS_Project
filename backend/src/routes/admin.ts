@@ -1,0 +1,100 @@
+// src/routes/admin.ts -------------------------------------------------
+import { Router, Request, Response } from 'express';
+import pool from '../db';
+import { authenticate } from '../middleware/auth';
+
+const router = Router();
+
+// shortcut – all endpoints require an *admin* JWT
+router.use(authenticate);
+
+/* ====== 2.1  Physician Schedule ====== */
+router.get('/physician-schedule/:physicianId', async (req, res) => {
+  const [rows]: any = await pool.execute(
+    'SELECT * FROM PHYSICIAN_SCHEDULE WHERE Physician_ID = ?',
+    [req.params.physicianId]
+  );
+  res.json(rows);
+});
+
+router.post('/physician-schedule', async (req, res) => {
+  const s = req.body;
+  await pool.execute(
+    'CALL spUpsertPhysicianSchedule(?,?,?,?,?,?)',
+    [null, s.Physician_ID, s.Day_Of_Week, s.Start_Time, s.End_Time, s.Notes]
+  );
+  res.json({ message: 'Schedule entry created' });
+});
+
+router.put('/physician-schedule/:id', async (req, res) => {
+  const s = req.body;
+  await pool.execute(
+    'CALL spUpsertPhysicianSchedule(?,?,?,?,?,?)',
+    [req.params.id, s.Physician_ID, s.Day_Of_Week, s.Start_Time, s.End_Time, s.Notes]
+  );
+  res.json({ message: 'Schedule entry updated' });
+});
+
+router.delete('/physician-schedule/:id', async (req, res) => {
+  await pool.execute('CALL spDeletePhysicianSchedule(?)', [req.params.id]);
+  res.json({ message: 'Schedule entry deleted' });
+});
+
+/* ====== 2.2  Bed admin ====== */
+router.get('/beds', async (_req, res) => {
+  const [rows]: any = await pool.execute('SELECT * FROM BED');
+  res.json(rows);
+});
+
+router.post('/beds', async (req, res) => {
+  const b = req.body;
+  await pool.execute('CALL spUpsertBed(?,?,?,?)',
+    [null, b.Bed_Number, b.Ward, b.Status]);
+  res.json({ message: 'Bed created' });
+});
+
+router.put('/beds/:id', async (req, res) => {
+  const b = req.body;
+  await pool.execute('CALL spUpsertBed(?,?,?,?)',
+    [req.params.id, b.Bed_Number, b.Ward, b.Status]);
+  res.json({ message: 'Bed updated' });
+});
+
+router.delete('/beds/:id', async (req, res) => {
+  await pool.execute('CALL spDeleteBed(?)', [req.params.id]);
+  res.json({ message: 'Bed deleted' });
+});
+
+/* ====== 2.3  Bed Rates ====== */
+router.get('/bed-rates', async (_req, res) => {
+  const [rows]: any = await pool.execute('SELECT * FROM BED_RATE');
+  res.json(rows);
+});
+
+router.post('/bed-rates', async (req, res) => {
+  const r = req.body;
+  await pool.execute('CALL spUpsertBedRate(?,?,?,?,?)',
+    [null, r.Ward, r.Daily_Rate, r.Effective_From, r.Effective_To]);
+  res.json({ message: 'Rate created' });
+});
+
+router.put('/bed-rates/:id', async (req, res) => {
+  const r = req.body;
+  await pool.execute('CALL spUpsertBedRate(?,?,?,?,?)',
+    [req.params.id, r.Ward, r.Daily_Rate, r.Effective_From, r.Effective_To]);
+  res.json({ message: 'Rate updated' });
+});
+
+router.delete('/bed-rates/:id', async (req, res) => {
+  await pool.execute('CALL spDeleteBedRate(?)', [req.params.id]);
+  res.json({ message: 'Rate deleted' });
+});
+
+/* ====== 2.4  Invoice preview ====== */
+router.get('/invoice/:billId', async (req, res) => {
+  const [rows]: any = await pool.execute('CALL spGenerateInvoice(?)', [req.params.billId]);
+  if (!rows[0][0]) return res.status(404).json({ message: 'Bill not found' });
+  res.json(rows[0][0]);
+});
+
+export default router;

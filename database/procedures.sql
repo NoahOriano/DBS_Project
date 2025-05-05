@@ -633,3 +633,103 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+-- Aditional Procedures for Bed Management
+/* ------------ PHYSICIAN_SCHEDULE CRUD ------------- */
+DELIMITER $$
+CREATE PROCEDURE spUpsertPhysicianSchedule (           -- create or update
+  IN p_Schedule_ID  INT,
+  IN p_Physician_ID INT,
+  IN p_Day_of_Week  ENUM('Mon','Tue','Wed','Thu','Fri','Sat','Sun'),
+  IN p_Start        TIME,
+  IN p_End          TIME,
+  IN p_Notes        VARCHAR(255)
+) BEGIN
+  IF p_Schedule_ID IS NULL THEN
+      INSERT INTO PHYSICIAN_SCHEDULE
+        (Physician_ID, Day_Of_Week, Start_Time, End_Time, Notes)
+        VALUES (p_Physician_ID, p_Day_of_Week, p_Start, p_End, p_Notes);
+  ELSE
+      UPDATE PHYSICIAN_SCHEDULE
+         SET Day_Of_Week = p_Day_of_Week,
+             Start_Time  = p_Start,
+             End_Time    = p_End,
+             Notes       = p_Notes
+       WHERE Schedule_ID = p_Schedule_ID;
+  END IF;
+END$$
+
+CREATE PROCEDURE spDeletePhysicianSchedule (IN p_Schedule_ID INT)
+BEGIN
+  DELETE FROM PHYSICIAN_SCHEDULE WHERE Schedule_ID = p_Schedule_ID;
+END$$
+
+/* ------------ BED CRUD (bed table already exists) ------------- */
+CREATE PROCEDURE spUpsertBed (
+  IN p_Bed_ID     INT,
+  IN p_Bed_Number VARCHAR(10),
+  IN p_Ward       VARCHAR(50),
+  IN p_Status     ENUM('Available','Occupied')
+) BEGIN
+  IF p_Bed_ID IS NULL THEN
+    INSERT INTO BED (Bed_Number, Ward, Status)
+      VALUES (p_Bed_Number, p_Ward, COALESCE(p_Status,'Available'));
+  ELSE
+    UPDATE BED
+       SET Bed_Number = p_Bed_Number,
+           Ward       = p_Ward,
+           Status     = p_Status
+     WHERE Bed_ID = p_Bed_ID;
+  END IF;
+END$$
+
+CREATE PROCEDURE spDeleteBed (IN p_Bed_ID INT)
+BEGIN
+  DELETE FROM BED WHERE Bed_ID = p_Bed_ID;
+END$$
+
+/* ------------ BED_RATE CRUD ------------- */
+CREATE PROCEDURE spUpsertBedRate (
+  IN p_Rate_ID      INT,
+  IN p_Ward         VARCHAR(50),
+  IN p_Daily_Rate   DECIMAL(10,2),
+  IN p_From         DATE,
+  IN p_To           DATE
+) BEGIN
+  IF p_Rate_ID IS NULL THEN
+    INSERT INTO BED_RATE (Ward, Daily_Rate, Effective_From, Effective_To)
+      VALUES (p_Ward, p_Daily_Rate, p_From, p_To);
+  ELSE
+    UPDATE BED_RATE
+       SET Ward           = p_Ward,
+           Daily_Rate     = p_Daily_Rate,
+           Effective_From = p_From,
+           Effective_To   = p_To
+     WHERE Rate_ID = p_Rate_ID;
+  END IF;
+END$$
+
+CREATE PROCEDURE spDeleteBedRate (IN p_Rate_ID INT)
+BEGIN
+  DELETE FROM BED_RATE WHERE Rate_ID = p_Rate_ID;
+END$$
+
+/* ------------ Quick invoice helper ------------- */
+CREATE PROCEDURE spGenerateInvoice (IN p_Bill_ID INT)
+BEGIN
+  SELECT
+    b.Bill_ID,
+    p.Patient_ID,
+    CONCAT(p.First_Name,' ',p.Last_Name)  AS Patient,
+    b.Bill_Date,
+    b.Total_Charges,
+    b.Patient_Responsibility,
+    IFNULL(SUM(pay.Payment_Amount),0)     AS Paid,
+    b.Total_Charges - IFNULL(SUM(pay.Payment_Amount),0) AS Balance
+  FROM BILLING b
+  JOIN PATIENT  p ON p.Patient_ID = b.Patient_ID
+  LEFT JOIN PAYMENT pay ON pay.Bill_ID = b.Bill_ID
+ WHERE b.Bill_ID = p_Bill_ID
+ GROUP BY b.Bill_ID;
+END$$
+DELIMITER ;

@@ -394,3 +394,26 @@ CREATE TABLE IF NOT EXISTS DISCHARGE_LOG (
   FOREIGN KEY (Patient_ID) REFERENCES PATIENT(Patient_ID),
   FOREIGN KEY (Physician_ID) REFERENCES PHYSICIAN(Physician_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Additions
+-- Physician availability 
+CREATE TABLE IF NOT EXISTS PHYSICIAN_SCHEDULE (
+  Schedule_ID   INT AUTO_INCREMENT PRIMARY KEY,
+  Physician_ID  INT  NOT NULL,
+  Day_Of_Week   ENUM('Mon','Tue','Wed','Thu','Fri','Sat','Sun') NOT NULL,
+  Start_Time    TIME NOT NULL,
+  End_Time      TIME NOT NULL,
+  Notes         VARCHAR(255),
+  UNIQUE KEY uq_doc_day (Physician_ID, Day_Of_Week, Start_Time),
+  FOREIGN KEY (Physician_ID) REFERENCES PHYSICIAN(Physician_ID)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS BED_RATE (
+  Rate_ID       INT AUTO_INCREMENT PRIMARY KEY,
+  Ward          VARCHAR(50) NOT NULL,
+  Daily_Rate    DECIMAL(10,2) NOT NULL,
+  Effective_From DATE NOT NULL,
+  Effective_To   DATE NULL,
+  UNIQUE KEY uq_ward_date (Ward, Effective_From)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
