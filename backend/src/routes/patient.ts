@@ -8,15 +8,37 @@ const patientOnly = authorize(['patient']);
 /* ──────────────────────────────────────
    1. Physician list for the dropdown
 ─────────────────────────────────────── */
-router.get('/physicians', authenticate, patientOnly, async (_req, res) => {
-  const [rows]: any = await pool.execute(`
-    SELECT  ph.Physician_ID AS id,
-            u.Username       AS username
-      FROM  PHYSICIAN ph
-      JOIN  Users     u ON u.Id = ph.User_Id
-     ORDER  BY u.Username
-  `);
-  res.json(rows);
+router.get('/physicians', authenticate, patientOnly, async (_req: Request, res: Response) => {
+  try {
+    const [rows]: any = await pool.execute(`
+      SELECT Physician_ID AS id,
+             CONCAT(First_Name, ' ', Last_Name) AS name
+      FROM PHYSICIAN
+      ORDER BY name
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to load physicians' });
+  }
+});
+router.get('/physicians/:id', authenticate, patientOnly, async (req: Request, res: Response) => {
+  try {
+    const physicianId = req.params.id;
+    const [rows]: any = await pool.execute(`
+      SELECT Physician_ID AS id,
+             CONCAT(First_Name, ' ', Last_Name) AS name
+      FROM PHYSICIAN
+      WHERE Physician_ID = ?
+    `, [physicianId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Physician not found' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to load physician' });
+  }
 });
 
 /* ──────────────────────────────────────

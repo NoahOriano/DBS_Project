@@ -97,7 +97,7 @@ export default function App() {
         <Route
           path="/payments"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['patient']}>
               <PatientPayments />
             </PrivateRoute>
           }

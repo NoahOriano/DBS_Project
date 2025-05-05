@@ -909,6 +909,7 @@ DELIMITER ;
 -- Aditional Procedures for Bed Management
 /* ------------ PHYSICIAN_SCHEDULE CRUD ------------- */
 DELIMITER $$
+DROP PROCEDURE IF EXISTS spUpsertPhysicianSchedule$$
 CREATE PROCEDURE spUpsertPhysicianSchedule (           -- create or update
   IN p_Schedule_ID  INT,
   IN p_Physician_ID INT,
@@ -931,12 +932,14 @@ CREATE PROCEDURE spUpsertPhysicianSchedule (           -- create or update
   END IF;
 END$$
 
+DROP PROCEDURE IF EXISTS spDeletePhysicianSchedule$$
 CREATE PROCEDURE spDeletePhysicianSchedule (IN p_Schedule_ID INT)
 BEGIN
   DELETE FROM PHYSICIAN_SCHEDULE WHERE Schedule_ID = p_Schedule_ID;
 END$$
 
 /* ------------ BED CRUD (bed table already exists) ------------- */
+DROP PROCEDURE IF EXISTS spUpsertBed$$
 CREATE PROCEDURE spUpsertBed (
   IN p_Bed_ID     INT,
   IN p_Bed_Number VARCHAR(10),
@@ -955,12 +958,14 @@ CREATE PROCEDURE spUpsertBed (
   END IF;
 END$$
 
+DROP PROCEDURE IF EXISTS spDeleteBed$$
 CREATE PROCEDURE spDeleteBed (IN p_Bed_ID INT)
 BEGIN
   DELETE FROM BED WHERE Bed_ID = p_Bed_ID;
 END$$
 
 /* ------------ BED_RATE CRUD ------------- */
+DROP PROCEDURE IF EXISTS spUpsertBedRate$$
 CREATE PROCEDURE spUpsertBedRate (
   IN p_Rate_ID      INT,
   IN p_Ward         VARCHAR(50),
@@ -981,12 +986,15 @@ CREATE PROCEDURE spUpsertBedRate (
   END IF;
 END$$
 
+DROP PROCEDURE IF EXISTS spDeleteBedRate$$
 CREATE PROCEDURE spDeleteBedRate (IN p_Rate_ID INT)
 BEGIN
   DELETE FROM BED_RATE WHERE Rate_ID = p_Rate_ID;
 END$$
 
 /* ------------ Quick invoice helper ------------- */
+
+DROP PROCEDURE IF EXISTS spGenerateInvoice$$
 CREATE PROCEDURE spGenerateInvoice (IN p_Bill_ID INT)
 BEGIN
   SELECT
