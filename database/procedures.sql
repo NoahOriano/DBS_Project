@@ -1036,13 +1036,14 @@ BEGIN
   SELECT * FROM APPOINTMENT WHERE Appointment_ID = LAST_INSERT_ID();
 END$$
 
--- Update and return
+DELIMITER $$
+
 DROP PROCEDURE IF EXISTS spUpdateAppointment$$
 CREATE PROCEDURE spUpdateAppointment (
-  IN p_AppId       INT,
-  IN p_Date        DATE,
-  IN p_Time        TIME,
-  IN p_Reason      VARCHAR(255)
+  IN p_AppId INT,
+  IN p_Date  DATE,
+  IN p_Time  TIME,
+  IN p_Reason VARCHAR(255)
 )
 BEGIN
   UPDATE APPOINTMENT
@@ -1053,12 +1054,12 @@ BEGIN
   SELECT * FROM APPOINTMENT WHERE Appointment_ID = p_AppId;
 END$$
 
--- Delete
 DROP PROCEDURE IF EXISTS spDeleteAppointment$$
 CREATE PROCEDURE spDeleteAppointment (IN p_AppId INT)
 BEGIN
   DELETE FROM APPOINTMENT WHERE Appointment_ID = p_AppId;
 END$$
 DELIMITER ;
+
 
 
