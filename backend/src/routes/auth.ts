@@ -32,21 +32,21 @@ router.post(
       const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
       const userId: number = userRows[0][0].Id;
 
-      // 4) Initialize their profile row
+      // 4) Initialize their profile row - CHANGED UserId to User_Id
       if (role === 'patient') {
         await pool.execute(
-          'INSERT IGNORE INTO PATIENT (User_Id) VALUES(?)',
-          [userId]
+          'INSERT IGNORE INTO PATIENT (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
+          [userId, '', ''] // Added First_Name and Last_Name as they are required fields
         );
       } else if (role === 'physician') {
         await pool.execute(
-          'INSERT IGNORE INTO PHYSICIAN (User_Id) VALUES(?)',
-          [userId]
+          'INSERT IGNORE INTO PHYSICIAN (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
+          [userId, '', ''] // Added First_Name and Last_Name as they are required fields
         );
       } else { // admin
         await pool.execute(
-          'INSERT IGNORE INTO ADMIN_PROFILE (User_Id) VALUES(?)',
-          [userId]
+          'INSERT IGNORE INTO ADMIN_PROFILE (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
+          [userId, '', ''] // Added First_Name and Last_Name as they are required fields
         );
       }
 
