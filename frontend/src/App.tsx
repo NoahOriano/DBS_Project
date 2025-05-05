@@ -11,6 +11,10 @@ import { JSX } from 'react';
 import Profile from './pages/Profile';
 import PatientAppointments from './pages/PatientAppointments';
 import PatientPayments     from './pages/PatientPayments';
+import BedAdmin                from './pages/BedAdmin';
+import PhysicianScheduleAdmin  from './pages/PhysicianScheduleAdmin';
+import BedRateAdmin            from './pages/BedRateAdmin';
+import InvoiceViewer           from './pages/InvoiceViewer';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -66,6 +70,10 @@ export default function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/admin/beds" element={<PrivateRoute><BedAdmin/></PrivateRoute>} />
+        <Route path="/admin/schedule" element={<PrivateRoute><PhysicianScheduleAdmin/></PrivateRoute>} />
+        <Route path="/admin/bed-rates" element={<PrivateRoute><BedRateAdmin/></PrivateRoute>} />
+        <Route path="/admin/invoice/:billId" element={<PrivateRoute><InvoiceViewer/></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
