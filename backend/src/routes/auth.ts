@@ -14,13 +14,11 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     let { username, password, role } = req.body;
 
-    // 1) Validate presence
     if (!username || !password || !role) {
       res.status(400).json({ message: 'Username, password and role are required' });
       return;
     }
 
-    // 2) Normalize & validate role
     role = String(role).toLowerCase();
     const allowed = ['patient', 'physician', 'admin'];
     if (!allowed.includes(role)) {
@@ -28,25 +26,35 @@ router.post(
       return;
     }
 
-    // 3) Hash password and create user
-    const hash = await bcrypt.hash(password, 12);
-    await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, role]);
+    try {
+      const hash = await bcrypt.hash(password, 12);
+      await pool.execute('CALL spCreateUser(?, ?, ?)', [username, hash, role]);
 
-    // 4) Lookup the new user's Id
-    const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
-    const userId: number = userRows[0][0].Id;
+      const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
+      const userId: number = userRows[0][0].Id;
 
-    // 5) Initialize their empty profile row
-    if (role === 'patient') {
-      await pool.execute('INSERT IGNORE INTO PATIENT (User_Id) VALUES(?)', [userId]);
-    } else if (role === 'physician') {
-      await pool.execute('INSERT IGNORE INTO PHYSICIAN (User_Id) VALUES(?)', [userId]);
-    } else /* admin */ {
-      await pool.execute('INSERT IGNORE INTO ADMIN_PROFILE (User_Id) VALUES(?)', [userId]);
+      if (role === 'patient') {
+        await pool.execute(
+          'INSERT IGNORE INTO PATIENT (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
+          [userId, '', '']
+        );
+      } else if (role === 'physician') {
+        await pool.execute(
+          'INSERT IGNORE INTO PHYSICIAN (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
+          [userId, '', '']
+        );
+      } else {
+        await pool.execute(
+          'INSERT IGNORE INTO ADMIN_PROFILE (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
+          [userId, '', '']
+        );
+      }
+
+      res.status(201).json({ message: 'User created and profile initialized' });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Failed to create user' });
     }
-
-    // 6) Respond
-    res.status(201).json({ message: 'User created and profile initialized' });
   }
 );
 
@@ -60,19 +68,22 @@ router.post(
       return;
     }
 
-    // lookup user
-    const [rows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
-    const user = rows[0][0];
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+    try {
+      const [rows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
+      const user = rows[0][0];
+      if (!user) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+      }
+
+      const answerHash = await bcrypt.hash(securityAnswer, 12);
+      await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [user.Id, securityQuestion, answerHash]);
+
+      res.json({ message: 'Security question set successfully' });
+    } catch (error) {
+      console.error('Set security QA error:', error);
+      res.status(500).json({ message: 'Failed to set security question' });
     }
-
-    // hash the answer and store
-    const answerHash = await bcrypt.hash(securityAnswer, 12);
-    await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [user.Id, securityQuestion, answerHash]);
-
-    res.json({ message: 'Security question set successfully' });
   }
 );
 
@@ -88,22 +99,25 @@ router.post(
       return;
     }
 
-    // normalize & validate each role
     const normalized = roles.map((r: string) => String(r).toLowerCase());
-    if (normalized.some((r: string) => !['patient','physician','admin'].includes(r))) {
-      res.status(400).json({ message: 'Roles must be patient, physician, or admin' });
+    if (normalized.some((r: string) => !['admin', 'provider'].includes(r))) {
+      res.status(400).json({ message: 'Roles must be admin or provider' });
       return;
     }
 
-    // hash + create
-    const hash = await bcrypt.hash(password, 12);
-    await pool.execute('CALL spCreateUser(?, ?, ?)', [
-      username,
-      hash,
-      normalized.join(','),
-    ]);
+    try {
+      const hash = await bcrypt.hash(password, 12);
+      await pool.execute('CALL spCreateUser(?, ?, ?)', [
+        username,
+        hash,
+        normalized.join(','),
+      ]);
 
-    res.status(201).json({ message: 'Admin user created' });
+      res.status(201).json({ message: 'Admin/Provider user created' });
+    } catch (error) {
+      console.error('Admin registration error:', error);
+      res.status(500).json({ message: 'Failed to create admin user' });
+    }
   }
 );
 
@@ -117,25 +131,27 @@ router.post(
       return;
     }
 
-    const [rows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
-    const user = rows[0][0];
-    if (!user || !(await bcrypt.compare(password, user.PasswordHash))) {
-      res.status(401).json({ message: 'Invalid credentials' });
-      return;
+    try {
+      const [rows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
+      const user = rows[0][0];
+      if (!user || !(await bcrypt.compare(password, user.PasswordHash))) {
+        res.status(401).json({ message: 'Invalid credentials' });
+        return;
+      }
+
+      const rolesArray = (user.Roles as string).split(',').map((r: string) => r.trim().toLowerCase());
+
+      const token = jwt.sign(
+        { id: user.Id, username, roles: rolesArray },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '2h' }
+      );
+
+      res.json({ token });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
     }
-
-    // split and lowercase roles
-    const rolesArray = (user.Roles as string)
-      .split(',')
-      .map((r: string) => r.trim().toLowerCase());
-
-    const token = jwt.sign(
-      { id: user.Id, username, roles: rolesArray },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '2h' }
-    );
-
-    res.json({ token });
   }
 );
 
@@ -150,18 +166,23 @@ router.post(
       return;
     }
 
-    const userId = (req.user as JwtPayload).id;
-    const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
-    const user = rows[0][0];
-    if (!user || !(await bcrypt.compare(oldPassword, user.PasswordHash))) {
-      res.status(401).json({ message: 'Invalid credentials' });
-      return;
+    try {
+      const userId = (req.user as JwtPayload).id;
+      const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
+      const user = rows[0][0];
+      if (!user || !(await bcrypt.compare(oldPassword, user.PasswordHash))) {
+        res.status(401).json({ message: 'Invalid credentials' });
+        return;
+      }
+
+      const hash = await bcrypt.hash(newPassword, 12);
+      await pool.execute('CALL spChangePassword(?, ?)', [userId, hash]);
+
+      res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: 'Failed to change password' });
     }
-
-    const hash = await bcrypt.hash(newPassword, 12);
-    await pool.execute('CALL spChangePassword(?, ?)', [userId, hash]);
-
-    res.json({ message: 'Password changed successfully' });
   }
 );
 
@@ -170,17 +191,22 @@ router.get(
   '/security-question/:username',
   async (req: Request, res: Response) => {
     const { username } = req.params;
-    const [rows]: any = await pool.execute('CALL spGetSecurityQAByUsername(?)', [username]);
-    const data = rows[0][0];
-    if (!data) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+    try {
+      const [rows]: any = await pool.execute('CALL spGetSecurityQAByUsername(?)', [username]);
+      const data = rows[0][0];
+      if (!data) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+      }
+      if (!data.SecurityQuestion) {
+        res.status(400).json({ message: 'Security question not set' });
+        return;
+      }
+      res.json({ securityQuestion: data.SecurityQuestion });
+    } catch (error) {
+      console.error('Get security question error:', error);
+      res.status(500).json({ message: 'Failed to get security question' });
     }
-    if (!data.SecurityQuestion) {
-      res.status(400).json({ message: 'Security question not set' });
-      return;
-    }
-    res.json({ securityQuestion: data.SecurityQuestion });
   }
 );
 
@@ -194,27 +220,32 @@ router.post(
       return;
     }
 
-    const [rows]: any = await pool.execute('CALL spGetSecurityQAByUsername(?)', [username]);
-    const data = rows[0][0];
-    if (!data) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-    if (!data.SecurityAnswerHash) {
-      res.status(400).json({ message: 'Security QA not set up for this user' });
-      return;
-    }
+    try {
+      const [rows]: any = await pool.execute('CALL spGetSecurityQAByUsername(?)', [username]);
+      const data = rows[0][0];
+      if (!data) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+      }
+      if (!data.SecurityAnswerHash) {
+        res.status(400).json({ message: 'Security QA not set up for this user' });
+        return;
+      }
 
-    const matches = await bcrypt.compare(answer, data.SecurityAnswerHash);
-    if (!matches) {
-      res.status(401).json({ message: 'Invalid security answer' });
-      return;
+      const matches = await bcrypt.compare(answer, data.SecurityAnswerHash);
+      if (!matches) {
+        res.status(401).json({ message: 'Invalid security answer' });
+        return;
+      }
+
+      const hash = await bcrypt.hash(newPassword, 12);
+      await pool.execute('CALL spChangePassword(?, ?)', [data.Id, hash]);
+
+      res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Failed to reset password' });
     }
-
-    const hash = await bcrypt.hash(newPassword, 12);
-    await pool.execute('CALL spChangePassword(?, ?)', [data.Id, hash]);
-
-    res.json({ message: 'Password reset successfully' });
   }
 );
 
@@ -223,21 +254,22 @@ router.get(
   '/me',
   authenticate,
   async (req, res) => {
-    const userId = (req.user as JwtPayload).id;
-    const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
-    const u = rows[0][0];
+    try {
+      const userId = (req.user as JwtPayload).id;
+      const [rows]: any = await pool.execute('CALL spGetUserById(?)', [userId]);
+      const u = rows[0][0];
+      const rolesArray = (u.Roles as string).split(',').map((r: string) => r.trim().toLowerCase());
 
-    // split+lowercase roles
-    const rolesArray = (u.Roles as string)
-      .split(',')
-      .map((r: string) => r.trim().toLowerCase());
-
-    res.json({
-      id: u.Id,
-      username: u.Username,
-      roles: rolesArray,
-      securityQuestion: u.SecurityQuestion,
-    });
+      res.json({
+        id: u.Id,
+        username: u.Username,
+        roles: rolesArray,
+        securityQuestion: u.SecurityQuestion,
+      });
+    } catch (error) {
+      console.error('Get user info error:', error);
+      res.status(500).json({ message: 'Failed to get user information' });
+    }
   }
 );
 
@@ -252,13 +284,14 @@ router.put(
       res.status(400).json({ message: 'Question and answer are required' });
       return;
     }
-    const hash = await bcrypt.hash(securityAnswer, 12);
-    await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [
-      userId,
-      securityQuestion,
-      hash,
-    ]);
-    res.json({ message: 'Profile updated' });
+    try {
+      const hash = await bcrypt.hash(securityAnswer, 12);
+      await pool.execute('CALL spSetSecurityQA(?, ?, ?)', [userId, securityQuestion, hash]);
+      res.json({ message: 'Profile updated' });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
   }
 );
 

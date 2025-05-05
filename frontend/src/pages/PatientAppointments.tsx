@@ -36,7 +36,7 @@ export default function PatientAppointments() {
           navigate('/login');
         }
       })
-      .finally(() => setLoading(false));
+      .then(() => setLoading(false), () => setLoading(false));
   }, [logout, navigate]);
 
   // 2) start new
