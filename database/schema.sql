@@ -298,6 +298,30 @@ CREATE TABLE IF NOT EXISTS `PAYMENT` (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------
+-- Appointment (one patient ↔ one physician per row)
+-- ------------------------------------------------
+CREATE TABLE IF NOT EXISTS `APPOINTMENT` (
+  `Appointment_ID` INT  NOT NULL AUTO_INCREMENT,
+  `Patient_ID`     INT  NOT NULL,
+  `Physician_ID`   INT  NOT NULL,
+  `Date`           DATE NOT NULL,
+  `Time`           TIME NOT NULL,
+  `Reason`         VARCHAR(255),
+
+  `Created_At`     DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `Updated_At`     DATETIME DEFAULT CURRENT_TIMESTAMP
+                     ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`Appointment_ID`),
+  FOREIGN KEY (`Patient_ID`)
+      REFERENCES `PATIENT`(`Patient_ID`)       ON DELETE CASCADE,
+  FOREIGN KEY (`Physician_ID`)
+      REFERENCES `PHYSICIAN`(`Physician_ID`)   ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
 /*-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Grouping Three
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------*/

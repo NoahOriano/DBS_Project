@@ -1006,3 +1006,59 @@ BEGIN
 END$$
 DELIMITER ;
 
+DELIMITER $$
+
+-- Return all appointments for one patient
+DROP PROCEDURE IF EXISTS spGetAppointmentsForPatient$$
+CREATE PROCEDURE spGetAppointmentsForPatient (IN p_PatientId INT)
+BEGIN
+  SELECT  a.*,                          -- every column
+          CONCAT(u.Username) AS Physician_Username
+    FROM  APPOINTMENT a
+    JOIN  PHYSICIAN   ph ON ph.Physician_ID = a.Physician_ID
+    JOIN  Users       u  ON u.Id          = ph.User_Id
+   WHERE  a.Patient_ID = p_PatientId
+   ORDER  BY a.Date, a.Time;
+END$$
+
+-- Insert and return the row
+DROP PROCEDURE IF EXISTS spCreateAppointment$$
+CREATE PROCEDURE spCreateAppointment (
+  IN p_PatientId   INT,
+  IN p_PhysicianId INT,
+  IN p_Date        DATE,
+  IN p_Time        TIME,
+  IN p_Reason      VARCHAR(255)
+)
+BEGIN
+  INSERT INTO APPOINTMENT (Patient_ID, Physician_ID, Date, Time, Reason)
+               VALUES      (p_PatientId, p_PhysicianId, p_Date, p_Time, p_Reason);
+  SELECT * FROM APPOINTMENT WHERE Appointment_ID = LAST_INSERT_ID();
+END$$
+
+-- Update and return
+DROP PROCEDURE IF EXISTS spUpdateAppointment$$
+CREATE PROCEDURE spUpdateAppointment (
+  IN p_AppId       INT,
+  IN p_Date        DATE,
+  IN p_Time        TIME,
+  IN p_Reason      VARCHAR(255)
+)
+BEGIN
+  UPDATE APPOINTMENT
+     SET Date   = p_Date,
+         Time   = p_Time,
+         Reason = p_Reason
+   WHERE Appointment_ID = p_AppId;
+  SELECT * FROM APPOINTMENT WHERE Appointment_ID = p_AppId;
+END$$
+
+-- Delete
+DROP PROCEDURE IF EXISTS spDeleteAppointment$$
+CREATE PROCEDURE spDeleteAppointment (IN p_AppId INT)
+BEGIN
+  DELETE FROM APPOINTMENT WHERE Appointment_ID = p_AppId;
+END$$
+DELIMITER ;
+
+
