@@ -101,6 +101,18 @@ router.delete('/bed-rates/:id', async (req, res) => {
   res.json({ message: 'Rate deleted' });
 });
 
+router.get('/invoice', async (_req: Request, res: Response) => {
+  try {
+    const [rows]: any = await pool.execute(
+      `SELECT Bill_ID, Patient, Bill_Date, Total_Charges, Patient_Responsibility, Paid, Balance FROM INVOICE`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to load invoices' });
+  }
+});
+
 router.get('/invoice/:billId', async (req, res) => {
   const { billId } = req.params;
   try {
