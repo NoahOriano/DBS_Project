@@ -62,6 +62,9 @@ export default function Login() {
           Forgot Password?
         </Link>
       </div>
+      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              Don't have an account? <Link to="/Register">Register here</Link>
+            </div>
     </form>
   );
 }

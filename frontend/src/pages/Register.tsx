@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
-import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -16,21 +16,18 @@ export default function Register() {
     setError(null);
 
     try {
-      // 1) Create the user with chosen role
       await api.post('/auth/register', {
         username,
         password,
-        role,              // ← send the selected role!
+        role,
       });
 
-      // 2) Set their security question & answer
       await api.post('/auth/set-security-qa', {
         username,
         securityQuestion,
         securityAnswer,
       });
 
-      // 3) Redirect to login
       navigate('/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -103,6 +100,10 @@ export default function Register() {
       <button type="submit" style={{ width: '100%' }}>
         Sign Up
       </button>
+
+      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+        Already have an account? <Link to="/login">Login here</Link>
+      </div>
     </form>
   );
 }
