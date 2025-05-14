@@ -20,9 +20,13 @@ router.post(
     }
 
     role = String(role).toLowerCase();
-    const allowed = ['patient', 'physician', 'admin'];
-    if (!allowed.includes(role)) {
-      res.status(400).json({ message: 'Role must be one of: patient, physician, admin' });
+    const roleArray = role.split(',').map((r: string) => r.trim());
+
+const allowed = ['patient', 'physician', 'admin'];
+const invalidRoles = roleArray.filter((r: string) => !allowed.includes(r));
+
+    if (invalidRoles.length > 0) {
+      res.status(400).json({ message: `Invalid roles: ${invalidRoles.join(', ')}` });
       return;
     }
 
@@ -33,17 +37,22 @@ router.post(
       const [userRows]: any = await pool.execute('CALL spGetUserByUsername(?)', [username]);
       const userId: number = userRows[0][0].Id;
 
-      if (role === 'patient') {
+      // Insert into respective role-based profile tables
+      if (roleArray.includes('patient')) {
         await pool.execute(
           'INSERT IGNORE INTO PATIENT (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
           [userId, '', '']
         );
-      } else if (role === 'physician') {
+      }
+
+      if (roleArray.includes('physician')) {
         await pool.execute(
           'INSERT IGNORE INTO PHYSICIAN (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
           [userId, '', '']
         );
-      } else {
+      }
+
+      if (roleArray.includes('admin')) {
         await pool.execute(
           'INSERT IGNORE INTO ADMIN_PROFILE (User_Id, First_Name, Last_Name) VALUES(?, ?, ?)',
           [userId, '', '']
