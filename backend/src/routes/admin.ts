@@ -112,4 +112,51 @@ router.get('/invoice/:billId', async (req, res) => {
   }
 });
 
+router.post('/billings', async (req: Request, res: Response) => {
+  const { patientId, totalCharges, patientResponsibility, billDate } = req.body;
+
+  if (patientId === undefined || totalCharges === undefined || patientResponsibility === undefined || !billDate) {
+    return res.status(400).json({ message: 'Patient ID, total charges, patient responsibility, and bill date are required.' });
+  }
+
+  // Basic validation for numeric types
+  if (isNaN(parseFloat(totalCharges)) || isNaN(parseFloat(patientResponsibility)) || isNaN(parseInt(patientId))) {
+      return res.status(400).json({ message: 'Patient ID, total charges, and patient responsibility must be valid numbers.' });
+  }
+   // Validate date format if necessary, though HTML5 date input should provide YYYY-MM-DD
+  
+  try {
+    // sp_generate_bill (IN p_patient_id INT, IN p_total_charges DECIMAL(10,2), IN p_patient_resp DECIMAL(10,2), IN p_bill_date DATE)
+    // It has a `SELECT LAST_INSERT_ID() AS New_Bill_ID;`
+    const [result]: any = await pool.execute(
+      'CALL sp_generate_bill(?, ?, ?, ?)',
+      [parseInt(patientId), parseFloat(totalCharges), parseFloat(patientResponsibility), billDate]
+    );
+    
+    const newBillId = result[0]?.[0]?.New_Bill_ID;
+
+    if (newBillId) {
+      res.status(201).json({ message: 'Invoice created successfully', billId: newBillId });
+    } else {
+      // Fallback or error if New_Bill_ID is not returned as expected
+      // This might happen if the procedure output changes or if there's an issue with how results are wrapped.
+      console.error('Unexpected result from sp_generate_bill, New_Bill_ID not found:', result);
+      // Check if it's an OkPacket from a direct INSERT/UPDATE in the procedure (though sp_generate_bill has a SELECT)
+      if (Array.isArray(result) && result.length > 0 && typeof result[0].insertId === 'number' && result[0].insertId > 0) {
+         res.status(201).json({ message: 'Invoice created successfully (using insertId)', billId: result[0].insertId });
+      } else {
+        res.status(500).json({ message: 'Failed to create invoice or retrieve new Bill ID.' });
+      }
+    }
+  } catch (err: any) {
+    console.error('Error creating invoice:', err);
+    // Check for specific SQL errors if needed, e.g., foreign key constraint
+    if (err.sqlMessage) {
+        return res.status(400).json({ message: `Database error: ${err.sqlMessage}` });
+    }
+    res.status(500).json({ message: err.message || 'Failed to create invoice due to a server error.' });
+  }
+});
+
+
 export default router;

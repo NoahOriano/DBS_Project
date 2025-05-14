@@ -909,7 +909,7 @@ DELIMITER ;
 -- Aditional Procedures for Bed Management
 /* ------------ PHYSICIAN_SCHEDULE CRUD ------------- */
 DELIMITER $$
-CREATE PROCEDURE spUpsertPhysicianSchedule (           -- create or update
+CREATE PROCEDURE IF NOT EXISTS spUpsertPhysicianSchedule (           -- create or update
   IN p_Schedule_ID  INT,
   IN p_Physician_ID INT,
   IN p_Day_of_Week  ENUM('Mon','Tue','Wed','Thu','Fri','Sat','Sun'),
@@ -931,13 +931,13 @@ CREATE PROCEDURE spUpsertPhysicianSchedule (           -- create or update
   END IF;
 END$$
 
-CREATE PROCEDURE spDeletePhysicianSchedule (IN p_Schedule_ID INT)
+CREATE PROCEDURE IF NOT EXISTS spDeletePhysicianSchedule (IN p_Schedule_ID INT)
 BEGIN
   DELETE FROM PHYSICIAN_SCHEDULE WHERE Schedule_ID = p_Schedule_ID;
 END$$
 
 /* ------------ BED CRUD (bed table already exists) ------------- */
-CREATE PROCEDURE spUpsertBed (
+CREATE PROCEDURE IF NOT EXISTS spUpsertBed (
   IN p_Bed_ID     INT,
   IN p_Bed_Number VARCHAR(10),
   IN p_Ward       VARCHAR(50),
@@ -955,13 +955,13 @@ CREATE PROCEDURE spUpsertBed (
   END IF;
 END$$
 
-CREATE PROCEDURE spDeleteBed (IN p_Bed_ID INT)
+CREATE PROCEDURE IF NOT EXISTS spDeleteBed (IN p_Bed_ID INT)
 BEGIN
   DELETE FROM BED WHERE Bed_ID = p_Bed_ID;
 END$$
 
 /* ------------ BED_RATE CRUD ------------- */
-CREATE PROCEDURE spUpsertBedRate (
+CREATE PROCEDURE IF NOT EXISTS spUpsertBedRate (
   IN p_Rate_ID      INT,
   IN p_Ward         VARCHAR(50),
   IN p_Daily_Rate   DECIMAL(10,2),
@@ -981,12 +981,13 @@ CREATE PROCEDURE spUpsertBedRate (
   END IF;
 END$$
 
-CREATE PROCEDURE spDeleteBedRate (IN p_Rate_ID INT)
+CREATE PROCEDURE IF NOT EXISTS spDeleteBedRate (IN p_Rate_ID INT)
 BEGIN
   DELETE FROM BED_RATE WHERE Rate_ID = p_Rate_ID;
 END$$
 
 /* ------------ Quick invoice helper ------------- */
+DROP PROCEDURE IF EXISTS spGenerateInvoice$$
 CREATE PROCEDURE spGenerateInvoice (IN p_Bill_ID INT)
 BEGIN
   SELECT
@@ -1006,3 +1007,36 @@ BEGIN
 END$$
 DELIMITER ;
 
+
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS spGetPatientBillsWithBalance$$
+CREATE PROCEDURE spGetPatientBillsWithBalance (
+  IN p_user_id INT
+)
+BEGIN
+  DECLARE v_patient_id INT;
+
+  SELECT Patient_ID INTO v_patient_id
+  FROM PATIENT
+  WHERE User_Id = p_user_id
+  LIMIT 1;
+
+  IF v_patient_id IS NOT NULL THEN
+    SELECT
+        b.Bill_ID,
+        b.Bill_Date,
+        b.Total_Charges,
+        b.Patient_Responsibility,
+        COALESCE(SUM(pay.Payment_Amount), 0.00) AS Total_Paid,
+        (b.Patient_Responsibility - COALESCE(SUM(pay.Payment_Amount), 0.00)) AS Balance_Due
+    FROM BILLING b
+    LEFT JOIN PAYMENT pay ON b.Bill_ID = pay.Bill_ID
+    WHERE b.Patient_ID = v_patient_id
+    GROUP BY b.Bill_ID, b.Bill_Date, b.Total_Charges, b.Patient_Responsibility
+    ORDER BY b.Bill_Date DESC, b.Bill_ID DESC;
+  ELSE
+    SELECT NULL AS Bill_ID, NULL AS Bill_Date, NULL AS Total_Charges, NULL AS Patient_Responsibility, NULL AS Total_Paid, NULL AS Balance_Due LIMIT 0;
+  END IF;
+END$$
+DELIMITER ;
